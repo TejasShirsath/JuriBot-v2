@@ -28,7 +28,8 @@ export const Hero: React.FC<HeroProps> = ({ startAnimation = true }) => {
       {/* Background Watermark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 opacity-[0.03] select-none">
         <span className="font-serif text-[15rem] md:text-[25rem] leading-none text-charcoal tracking-tighter whitespace-nowrap">
-          JURIBOT
+          <span className="md:hidden">LAW</span>
+          <span className="hidden md:inline">JURIBOT</span>
         </span>
       </div>
 
@@ -51,7 +52,8 @@ export const Hero: React.FC<HeroProps> = ({ startAnimation = true }) => {
 
         {/* 3D Model */}
         <div className="relative w-full h-[50vh] md:h-screen md:absolute md:inset-0 md:flex md:items-start md:justify-center z-10 pointer-events-none">
-          <div className="w-full h-full md:w-247.5 md:h-247.5 lg:w-287.5 lg:h-287.5 relative md:mt-65 lg:mt-52">
+          {/* <div className="w-full h-full md:w-247.5 md:h-247.5 lg:w-287.5 lg:h-287.5 relative md:mt-65 lg:mt-52"> */}
+          <div className="w-full h-full md:w-[85vh] md:h-[85vh] lg:w-[130vh] lg:h-[130vh] relative md:mt-[30vh] lg:mt-[25vh]">
             {/* @ts-ignore */}
             <model-viewer
               src={justiceStatue}
