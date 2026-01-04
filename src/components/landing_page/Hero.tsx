@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { ArrowDown, Play } from "lucide-react";
-import Lottie from "lottie-react";
+import Lottie, { type LottieRefCurrentProps } from "lottie-react";
 import { EncryptedText } from "../ui/EncryptedText";
 import "@google/model-viewer";
 // @ts-ignore
@@ -8,7 +8,21 @@ import justiceStatue from "../../assets/JusticeStatue.glb";
 // @ts-ignore
 import hammerAnimation from "../../assets/hammer.json";
 
-export const Hero: React.FC = () => {
+interface HeroProps {
+  startAnimation?: boolean;
+}
+
+export const Hero: React.FC<HeroProps> = ({ startAnimation = true }) => {
+  const lottieRef = useRef<LottieRefCurrentProps>(null);
+
+  useEffect(() => {
+    if (startAnimation) {
+      lottieRef.current?.play();
+    } else {
+      lottieRef.current?.stop();
+    }
+  }, [startAnimation]);
+
   return (
     <section className="relative w-full min-h-screen bg-ivory flex flex-col items-center">
       {/* Background Watermark */}
@@ -30,6 +44,7 @@ export const Hero: React.FC = () => {
               encryptedClassName="text-charcoal/40"
               revealedClassName="text-charcoal"
               revealDelayMs={50}
+              start={startAnimation}
             />
           </h1>
         </div>
@@ -78,7 +93,12 @@ export const Hero: React.FC = () => {
 
           {/* Hammer */}
           <div className="mb-8 w-28 h-28 md:w-42 md:h-42 transform -rotate-12 hover:rotate-0 transition-transform duration-700">
-            <Lottie animationData={hammerAnimation} loop={false} />
+            <Lottie
+              lottieRef={lottieRef}
+              animationData={hammerAnimation}
+              loop={false}
+              autoplay={false}
+            />
           </div>
         </div>
 

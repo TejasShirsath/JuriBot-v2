@@ -5,9 +5,11 @@ import { PracticeAreas } from "../components/landing_page/Features";
 import { Team } from "../components/landing_page/Technology";
 import { FirmStats } from "../components/landing_page/Stats";
 import { Footer } from "../components/landing_page/Footer";
+import { LoadingScreen } from "../components/ui/LoadingScreen";
 
 const LandingPage: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if ("scrollRestoration" in history) {
@@ -28,12 +30,13 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-x-hidden bg-ivory">
+      {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
       <div className="fixed inset-0 pointer-events-none opacity-40 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] z-50 mix-blend-multiply"></div>
 
       <Navbar isScrolled={isScrolled} />
 
       <main className="grow z-10">
-        <Hero />
+        <Hero startAnimation={!isLoading} />
         <PracticeAreas />
         <FirmStats />
         <Team />
