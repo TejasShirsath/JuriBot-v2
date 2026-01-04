@@ -54,6 +54,7 @@ export const Hero: React.FC = () => {
               style={{ width: "100%", height: "100%", pointerEvents: "auto" }}
             >
               <div slot="progress-bar"></div>
+              {/* @ts-ignore */}
             </model-viewer>
           </div>
         </div>
@@ -88,7 +89,7 @@ export const Hero: React.FC = () => {
           </p>
 
           {/* Badge */}
-          <div className="relative group cursor-pointer mb-5">
+          <div className="relative group cursor-pointer">
             <div className="w-24 h-24 rounded-full border border-charcoal/20 flex items-center justify-center animate-spin-slow hover:pause">
               <svg className="w-full h-full" viewBox="0 0 100 100">
                 <path

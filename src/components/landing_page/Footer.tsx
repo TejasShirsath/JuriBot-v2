@@ -125,7 +125,7 @@ export const Footer: React.FC = () => {
 
             <a
               href="mailto:hello@juribot.in"
-              className="font-serif text-5xl md:text-7xl lg:text-8xl hover:text-coffee transition-colors duration-300 break-all md:break-normal"
+              className="font-serif text-[38px] md:text-7xl lg:text-8xl hover:text-coffee transition-colors duration-300 break-all md:break-normal"
             >
               HELLO@JURIBOT.IN
             </a>
