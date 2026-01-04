@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Navbar } from "../components/landing_page/Navbar";
 import { Hero } from "../components/landing_page/Hero";
 import { PracticeAreas } from "../components/landing_page/Features";
@@ -8,8 +9,11 @@ import { Footer } from "../components/landing_page/Footer";
 import { LoadingScreen } from "../components/ui/LoadingScreen";
 
 const LandingPage: React.FC = () => {
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    return location.state?.skipLoading !== true;
+  });
 
   useEffect(() => {
     if ("scrollRestoration" in history) {

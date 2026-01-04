@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
 import { PixelatedCanvas } from "../ui/PixelatedCanvas";
+import { Link } from "react-router-dom";
 
 export const Footer: React.FC = () => {
   return (
@@ -19,10 +20,12 @@ export const Footer: React.FC = () => {
               integrated technology and verified legal data.
             </p>
             <div className="pt-4">
-              <button className="relative overflow-hidden group bg-ivory text-charcoal px-8 py-3 font-bold tracking-widest text-xs transition-transform hover:scale-105">
-                <span className="relative z-10">TRY JURIBOT NOW</span>
-                <div className="absolute inset-0 bg-gold transform scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300 ease-out"></div>
-              </button>
+              <Link to="/auth">
+                <button className="relative overflow-hidden group bg-ivory text-charcoal px-8 py-3 font-bold tracking-widest text-xs transition-transform hover:scale-105">
+                  <span className="relative z-10">TRY JURIBOT NOW</span>
+                  <div className="absolute inset-0 bg-gold transform scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300 ease-out"></div>
+                </button>
+              </Link>
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface NavbarProps {
   isScrolled: boolean;
@@ -48,9 +49,11 @@ export const Navbar: React.FC<NavbarProps> = ({ isScrolled }) => {
         </div>
 
         <div className="hidden md:block">
-          <button className="bg-coffee text-ivory px-8 py-3 rounded-tr-xl rounded-bl-xl text-xs font-bold tracking-widest hover:bg-charcoal transition-all duration-300 transform hover:scale-105 shadow-lg border border-transparent hover:border-gold/30">
-            GET STARTED
-          </button>
+          <Link to="/auth">
+            <button className="bg-coffee text-ivory px-8 py-3 rounded-tr-xl rounded-bl-xl text-xs font-bold tracking-widest hover:bg-charcoal transition-all duration-300 transform hover:scale-105 shadow-lg border border-transparent hover:border-gold/30 cursor-pointer">
+              GET STARTED
+            </button>
+          </Link>
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -77,9 +80,11 @@ export const Navbar: React.FC<NavbarProps> = ({ isScrolled }) => {
               {link.name}
             </a>
           ))}
-          <button className="bg-coffee text-ivory px-6 py-3 w-full text-xs font-bold tracking-widest mt-4">
-            GET STARTED
-          </button>
+          <Link to="/auth" className="w-full">
+            <button className="bg-coffee text-ivory px-6 py-3 w-full text-xs font-bold tracking-widest mt-4 cursor-pointer">
+              GET STARTED
+            </button>
+          </Link>
         </div>
       )}
     </nav>
