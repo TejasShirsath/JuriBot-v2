@@ -19,7 +19,20 @@ export interface ChatInterfaceProps {
   className?: string;
 }
 
-const LANGUAGES = ["English", "Hindi", "Marathi", "Tamil", "Telugu", "Bengali"];
+const LANGUAGES = [
+  { text: "English", lang: "English" },
+  { text: "मराठी", lang: "Marathi" },
+  { text: "മലയാളം", lang: "Malayalam" },
+  { text: "ਪੰਜਾਬੀ", lang: "Punjabi" },
+  { text: "বাংলা", lang: "Bengali" },
+  { text: "हिन्दी", lang: "Hindi" },
+  { text: "தமிழ்", lang: "Tamil" },
+  { text: "తెలుగు", lang: "Telugu" },
+  { text: "ಕನ್ನಡ", lang: "Kannada" },
+  { text: "اردو", lang: "Urdu" },
+  { text: "संस्कृतम्", lang: "Sanskrit" },
+  { text: "ગુજરાતી", lang: "Gujarati" },
+];
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   context = "General Legal Assistant",
@@ -142,23 +155,26 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute right-0 top-full mt-2 w-32 bg-white rounded-xl shadow-lg border border-stone-100 py-1 z-50 overflow-hidden"
+                className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-stone-100 py-1 z-50 overflow-hidden max-h-64 overflow-y-auto custom-scrollbar"
               >
-                {LANGUAGES.map((lang) => (
+                {LANGUAGES.map((language) => (
                   <button
-                    key={lang}
+                    key={language.lang}
                     onClick={() => {
-                      setSelectedLanguage(lang);
+                      setSelectedLanguage(language.lang);
                       setShowLanguageMenu(false);
                     }}
                     className={clsx(
-                      "w-full text-left px-4 py-2 text-xs hover:bg-stone-50 transition-colors",
-                      selectedLanguage === lang
+                      "w-full text-left px-4 py-2 text-xs hover:bg-stone-50 transition-colors flex items-center justify-between",
+                      selectedLanguage === language.lang
                         ? "text-coffee font-bold bg-coffee/5"
                         : "text-charcoal/80"
                     )}
                   >
-                    {lang}
+                    <span>{language.lang}</span>
+                    <span className="opacity-50 font-serif">
+                      {language.text}
+                    </span>
                   </button>
                 ))}
               </motion.div>
