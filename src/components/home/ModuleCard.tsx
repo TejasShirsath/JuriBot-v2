@@ -1,12 +1,14 @@
 import React from "react";
 import { motion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface ModuleCardProps {
   title: string;
   description: string;
   icon: React.ReactNode;
   delay?: number;
+  path?: string;
 }
 
 export const ModuleCard: React.FC<ModuleCardProps> = ({
@@ -14,6 +16,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
   description,
   icon,
   delay = 0,
+  path = "/",
 }) => {
   return (
     <motion.div
@@ -22,6 +25,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
       transition={{ duration: 0.5, delay }}
       className="group relative h-64 w-full perspective-1000"
     >
+      <Link to={path} className="block h-full w-full">
       <div className="relative h-full w-full bg-white rounded-2xl border border-stone-200 p-6 transition-all duration-500 ease-out group-hover:shadow-[0_20px_50px_-12px_rgba(197,160,89,0.3)] group-hover:-translate-y-2 group-hover:border-gold/30 overflow-hidden">
         <div className="absolute -right-10 -top-10 w-32 h-32 bg-gold/10 rounded-full blur-2xl transition-all duration-700 group-hover:bg-gold/20 group-hover:scale-150"></div>
 
@@ -47,6 +51,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
           <div className="absolute bottom-0 left-0 w-full h-1 bg-linear-to-r from-gold/0 via-gold/50 to-gold/0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-700 ease-out"></div>
         </div>
       </div>
+      </Link>
     </motion.div>
   );
 };

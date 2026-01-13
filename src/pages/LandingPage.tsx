@@ -6,7 +6,7 @@ import { PracticeAreas } from "../components/landing_page/Features";
 import { Team } from "../components/landing_page/Technology";
 import { FirmStats } from "../components/landing_page/Stats";
 import { Footer } from "../components/landing_page/Footer";
-import { LoadingScreen } from "../components/ui/LoadingScreen";
+import { LoadingScreen } from "../components/common/LoadingScreen";
 
 const LandingPage: React.FC = () => {
   const location = useLocation();

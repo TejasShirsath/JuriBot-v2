@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { EncryptedText } from "../ui/EncryptedText";
+import { EncryptedText } from "../common/EncryptedText";
 
 const data = [
   { name: "Jargon", fullLabel: "Confused by Jargon", users: 120 },

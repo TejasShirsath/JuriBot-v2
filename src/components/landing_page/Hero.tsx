@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { ArrowDown, Play } from "lucide-react";
 import Lottie, { type LottieRefCurrentProps } from "lottie-react";
-import { EncryptedText } from "../ui/EncryptedText";
+import { EncryptedText } from "../common/EncryptedText";
 import "@google/model-viewer";
 // @ts-ignore
 import justiceStatue from "../../assets/JusticeStatue.glb";

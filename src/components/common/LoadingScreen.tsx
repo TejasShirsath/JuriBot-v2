@@ -26,16 +26,13 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
   const [showContent, setShowContent] = useState(true);
 
   useEffect(() => {
-    // Cycle through languages
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % languages.length);
     }, 120);
 
-    // Start exit sequence
     const timer = setTimeout(() => {
       clearInterval(interval);
       setIsExiting(true);
-      // Hide text slightly before curtains open or as they open
       setTimeout(() => setShowContent(false), 200);
     }, 2500);
 
@@ -46,16 +43,14 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col pointer-events-none">
-      {/* Top Half */}
+    <div className="fixed inset-0 z-100 flex flex-col pointer-events-none">
       <motion.div
         initial={{ y: 0 }}
         animate={isExiting ? { y: "-100%" } : { y: 0 }}
-        transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }} // Custom bezier for smooth "fast" feel
+        transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }}
         className="absolute top-0 left-0 w-full h-1/2 bg-charcoal z-20"
       />
 
-      {/* Bottom Half */}
       <motion.div
         initial={{ y: 0 }}
         animate={isExiting ? { y: "100%" } : { y: 0 }}
@@ -66,7 +61,6 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
         className="absolute bottom-0 left-0 w-full h-1/2 bg-charcoal z-20"
       />
 
-      {/* Text Content */}
       <AnimatePresence>
         {showContent && !isExiting && (
           <motion.div
@@ -81,7 +75,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.1 }}
-                className="text-2xl md:text-4xl font-serif text-ivory font-light min-w-[200px] text-center"
+                className="text-2xl md:text-4xl font-serif text-ivory font-light min-w-50 text-center"
               >
                 {languages[index].text}
               </motion.span>

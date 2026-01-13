@@ -2,7 +2,11 @@ import React from "react";
 import { LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export const HomeNavbar: React.FC = () => {
+interface HomeNavbarProps {
+  sectionTitle?: string;
+}
+
+export const HomeNavbar: React.FC<HomeNavbarProps> = ({ sectionTitle = "Workspace" }) => {
   // Mock user data
   const user = {
     name: "John Doe",
@@ -14,12 +18,12 @@ export const HomeNavbar: React.FC = () => {
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         {/* Logo */}
         <div className="shrink-0">
-          <span className="font-serif text-2xl font-bold tracking-wide text-charcoal flex items-center gap-2">
+          <Link to="/home" className="font-serif text-2xl font-bold tracking-wide text-charcoal flex items-center gap-2 hover:opacity-80 transition-opacity">
             JURIBOT
             <span className="text-[10px] bg-coffee text-ivory px-2 py-0.5 rounded-full font-sans tracking-widest uppercase">
-              Workspace
+              {sectionTitle}
             </span>
-          </span>
+          </Link>
         </div>
 
         {/* User Profile & Logout */}

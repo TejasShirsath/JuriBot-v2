@@ -1,6 +1,6 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
-import { PixelatedCanvas } from "../ui/PixelatedCanvas";
+import { PixelatedCanvas } from "../common/PixelatedCanvas";
 import { Link } from "react-router-dom";
 
 export const Footer: React.FC = () => {

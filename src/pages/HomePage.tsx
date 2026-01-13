@@ -10,24 +10,28 @@ export default function HomePage() {
       description:
         "Instantly summarize and interrogate legal documents in any language for immediate clarity and insight.",
       icon: <FileText size={24} />,
+      path: "/document-intelligence",
     },
     {
       title: "Cost Projection",
       description:
         "Calculate precise legal cost estimates based on case parameters to effectively plan your financial strategy.",
       icon: <Calculator size={24} />,
+      path: "/cost-projection",
     },
     {
       title: "Verdict Analytics",
       description:
         "Leverage historical data to predict case outcomes and gain strategic advantages through pattern analysis.",
       icon: <Scale size={24} />,
+      path: "/verdict-analytics",
     },
     {
       title: "Virtual Counsel",
       description:
         "Your always-on legal assistant for instant guidance, research, and answers to complex legal inquiries.",
       icon: <Bot size={24} />,
+      path: "/virtual-counsel",
     },
   ];
 
@@ -73,6 +77,7 @@ export default function HomePage() {
                 title={module.title}
                 description={module.description}
                 icon={module.icon}
+                path={module.path}
                 delay={0.4 + index * 0.1}
               />
             ))}
