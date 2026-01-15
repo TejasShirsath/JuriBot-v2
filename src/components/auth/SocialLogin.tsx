@@ -4,11 +4,13 @@ import { motion } from "framer-motion";
 interface SocialLoginProps {
   onGoogleClick: () => void;
   isLoading: boolean;
+  disabled?: boolean;
 }
 
 export const SocialLogin: React.FC<SocialLoginProps> = ({
   onGoogleClick,
   isLoading,
+  disabled
 }) => {
   return (
     <div className="mt-6">
@@ -24,12 +26,12 @@ export const SocialLogin: React.FC<SocialLoginProps> = ({
       </div>
 
       <motion.button
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
+        whileHover={!disabled ? { scale: 1.01 } : {}}
+        whileTap={!disabled ? { scale: 0.99 } : {}}
         onClick={onGoogleClick}
-        disabled={isLoading}
+        disabled={isLoading || disabled}
         type="button"
-        className="w-full bg-white border border-charcoal/10 text-charcoal py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group cursor-pointer"
+        className="w-full bg-white border border-charcoal/10 text-charcoal py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
       >
         <svg
           className="w-5 h-5"

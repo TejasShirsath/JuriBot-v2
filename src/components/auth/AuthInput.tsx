@@ -26,22 +26,22 @@ export const AuthInput: React.FC<AuthInputProps> = ({
 }) => {
   return (
     <div className="mb-4">
-      <div className="relative group">
-        <Icon className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-          error ? "text-red-400" : "text-charcoal/40 group-focus-within:text-coffee"
-        }`} />
-        
+      <div className="relative">
         <input
           type={showPasswordToggle && isPasswordVisible ? "text" : type}
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className={`w-full bg-white/50 border ${
-            error ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-charcoal/10 focus:border-coffee focus:ring-coffee"
+          className={`peer w-full bg-white/50 border ${
+            error ? "border-red-500 focus:border-red-500 focus:ring-red-500" : "border-charcoal/20 focus:border-coffee focus:ring-coffee"
           } rounded-lg py-3 pl-10 pr-4 ${
             showPasswordToggle ? "pr-10" : ""
-          } text-charcoal placeholder:text-charcoal/40 focus:outline-none focus:ring-1 transition-all`}
+          } text-charcoal placeholder:text-charcoal/40 focus:outline-none focus:ring-1 focus:ring-inset transition-all`}
         />
+
+        <Icon className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors pointer-events-none ${
+          error ? "text-red-400" : "text-charcoal/40 peer-focus:text-coffee"
+        }`} />
 
         {showPasswordToggle && onTogglePassword && (
           <button
@@ -54,7 +54,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
         )}
 
         {error && !showPasswordToggle && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 pointer-events-none">
             <AlertCircle className="w-4 h-4" />
           </div>
         )}
