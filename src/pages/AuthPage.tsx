@@ -1,12 +1,26 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, User, ArrowRight, ChevronLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  signInWithPopup, 
+  updateProfile 
+} from "firebase/auth";
+import { auth, googleProvider } from "../lib/firebase";
+
 import { AuthInput } from "../components/auth/AuthInput";
 import { AuthHeader } from "../components/auth/AuthHeader";
 import { SocialLogin } from "../components/auth/SocialLogin";
 
 type AuthMode = "signin" | "signup" | "forgot-password";
+
+interface FirebaseError {
+  code: string;
+  message: string;
+}
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -53,26 +67,57 @@ export default function AuthPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      navigate("/home");
+    } catch (err) {
+      const error = err as FirebaseError;
+      console.error("Google Sign-In Error:", error.code);
+      setErrors({ auth: "Google login failed. Please try again." });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
     setIsLoading(true);
-    // API call
-    setTimeout(() => {
-      setIsLoading(false);
-      if (mode === "forgot-password") {
+    try {
+      if (mode === "signup") {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        await updateProfile(userCredential.user, { displayName: formData.name });
+        navigate("/home");
+      } else if (mode === "signin") {
+        await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        navigate("/home");
+      } else if (mode === "forgot-password") {
+        await sendPasswordResetEmail(auth, formData.email);
         alert("Password reset link sent to your email!");
         setMode("signin");
-      } else {
-        navigate("/home");
       }
-    }, 1500);
+    } catch (err) {
+      const error = err as FirebaseError;
+      console.error("Auth Error:", error.code);
+      
+      // Map Firebase codes to user-friendly messages
+      const msg = error.code === "auth/user-not-found" ? "No account found with this email." :
+                  error.code === "auth/wrong-password" ? "Incorrect password." :
+                  error.code === "auth/email-already-in-use" ? "This email is already registered." :
+                  "Authentication failed. Please try again.";
+      
+      setErrors({ auth: msg });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="h-screen w-full bg-ivory flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background */}
+      {/* Background Watermark */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.02]">
         <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-serif text-[20rem] text-charcoal whitespace-nowrap">
           JURIBOT
@@ -86,9 +131,7 @@ export default function AuthPage() {
           className="absolute -top-12 left-0 md:-left-24 md:top-0 text-gold hover:text-coffee transition-colors z-50 flex items-center gap-2 group"
         >
           <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-sans font-bold tracking-wider text-sm">
-            BACK
-          </span>
+          <span className="font-sans font-bold tracking-wider text-sm">BACK</span>
         </Link>
 
         <motion.div
@@ -100,9 +143,12 @@ export default function AuthPage() {
           <div className="p-8">
             <AuthHeader mode={mode} />
 
-            {/* Form */}
+            {errors.auth && (
+              <p className="text-red-500 text-sm text-center mb-4 font-medium">{errors.auth}</p>
+            )}
+
             <form onSubmit={handleSubmit} className="flex flex-col">
-              <AnimatePresence>
+              <AnimatePresence mode="wait">
                 {mode === "signup" && (
                   <motion.div
                     key="name-field"
@@ -116,7 +162,7 @@ export default function AuthPage() {
                       type="text"
                       placeholder="Full Name"
                       value={formData.name}
-                      onChange={(e) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setFormData({ ...formData, name: e.target.value })
                       }
                       icon={User}
@@ -130,16 +176,17 @@ export default function AuthPage() {
                 type="email"
                 placeholder="Email Address"
                 value={formData.email}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
                 icon={Mail}
                 error={errors.email}
               />
 
-              <AnimatePresence>
+              <AnimatePresence mode="wait">
                 {mode !== "forgot-password" && (
                   <motion.div
+                    key="password-field"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
@@ -150,7 +197,7 @@ export default function AuthPage() {
                       type="password"
                       placeholder="Password"
                       value={formData.password}
-                      onChange={(e) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setFormData({ ...formData, password: e.target.value })
                       }
                       icon={Lock}
@@ -163,7 +210,7 @@ export default function AuthPage() {
                 )}
               </AnimatePresence>
 
-              <AnimatePresence>
+              <AnimatePresence mode="wait">
                 {mode === "signup" && (
                   <motion.div
                     key="confirm-password-field"
@@ -177,11 +224,8 @@ export default function AuthPage() {
                       type="password"
                       placeholder="Confirm Password"
                       value={formData.confirmPassword}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          confirmPassword: e.target.value,
-                        })
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setFormData({ ...formData, confirmPassword: e.target.value })
                       }
                       icon={Lock}
                       error={errors.confirmPassword}
@@ -211,11 +255,7 @@ export default function AuthPage() {
                   <div className="w-5 h-5 border-2 border-ivory/30 border-t-ivory rounded-full animate-spin" />
                 ) : (
                   <>
-                    {mode === "signin"
-                      ? "Sign In"
-                      : mode === "signup"
-                      ? "Create Account"
-                      : "Send Reset Link"}
+                    {mode === "signin" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -234,13 +274,11 @@ export default function AuthPage() {
 
             {mode !== "forgot-password" && (
               <>
-                <SocialLogin />
+                <SocialLogin onGoogleClick={handleGoogleSignIn} isLoading={isLoading} />
 
                 <div className="mt-8 text-center">
                   <p className="text-charcoal/60 text-sm">
-                    {mode === "signin"
-                      ? "Don't have an account?"
-                      : "Already have an account?"}
+                    {mode === "signin" ? "Don't have an account?" : "Already have an account?"}
                     <button
                       onClick={toggleMode}
                       className="ml-2 text-coffee font-medium hover:underline focus:outline-none cursor-pointer"
