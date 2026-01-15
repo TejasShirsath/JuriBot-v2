@@ -13,6 +13,7 @@
     "@google/model-viewer": "^4.1.0",
     "@tailwindcss/vite": "^4.1.18",
     "clsx": "^2.1.1",
+    "firebase": "^12.8.0",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.562.0",
     "motion": "^12.23.26",

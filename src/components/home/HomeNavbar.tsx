@@ -1,16 +1,23 @@
 import React from "react";
 import { LogOut, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 interface HomeNavbarProps {
   sectionTitle?: string;
 }
 
 export const HomeNavbar: React.FC<HomeNavbarProps> = ({ sectionTitle = "Workspace" }) => {
-  // Mock user data
-  const user = {
-    name: "John Doe",
-    profilePic: null, // Use null to trigger fallback
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/auth");
+    } catch (error) {
+      console.error("Failed to log out", error);
+    }
   };
 
   return (
@@ -30,13 +37,13 @@ export const HomeNavbar: React.FC<HomeNavbarProps> = ({ sectionTitle = "Workspac
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
             <div className="text-right hidden md:block">
-              <p className="text-sm font-bold text-charcoal">{user.name}</p>
+              <p className="text-sm font-bold text-charcoal">{currentUser?.displayName || currentUser?.email || "User"}</p>
             </div>
             <div className="h-10 w-10 rounded-full bg-coffee/10 border border-coffee/20 flex items-center justify-center overflow-hidden">
-              {user.profilePic ? (
+              {currentUser?.photoURL ? (
                 <img
-                  src={user.profilePic}
-                  alt={user.name}
+                  src={currentUser.photoURL}
+                  alt={currentUser.displayName || "User"}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -46,15 +53,15 @@ export const HomeNavbar: React.FC<HomeNavbarProps> = ({ sectionTitle = "Workspac
           </div>
 
           <div className="h-8 w-px bg-charcoal/10 mx-2 hidden md:block"></div>
-          <Link
-            to="/auth"
+          <button
+            onClick={handleLogout}
             className="group flex items-center gap-2 text-charcoal/60 hover:text-red-600 transition-colors duration-300 cursor-pointer"
           >
             <LogOut size={20} className="transition-transform duration-300" />
             <span className="text-xs font-bold tracking-widest hidden md:block group-hover:translate-x-1 transition-transform duration-300">
               LOGOUT
             </span>
-          </Link>
+          </button>
         </div>
       </div>
     </nav>

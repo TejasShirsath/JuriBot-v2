@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 interface NavbarProps {
   isScrolled: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ isScrolled }) => {
+  const { currentUser } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -49,7 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({ isScrolled }) => {
         </div>
 
         <div className="hidden md:block">
-          <Link to="/auth">
+          <Link to={currentUser ? "/home" : "/auth"}>
             <button className="bg-coffee text-ivory px-8 py-3 rounded-tr-xl rounded-bl-xl text-xs font-bold tracking-widest hover:bg-charcoal transition-all duration-300 transform hover:scale-105 shadow-lg border border-transparent hover:border-gold/30 cursor-pointer">
               GET STARTED
             </button>
@@ -80,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({ isScrolled }) => {
               {link.name}
             </a>
           ))}
-          <Link to="/auth" className="w-full">
+          <Link to={currentUser ? "/home" : "/auth"} className="w-full">
             <button className="bg-coffee text-ivory px-6 py-3 w-full text-xs font-bold tracking-widest mt-4 cursor-pointer">
               GET STARTED
             </button>

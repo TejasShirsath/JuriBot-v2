@@ -1,297 +1,60 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, User, ArrowRight, ChevronLeft } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  sendPasswordResetEmail, 
-  signInWithPopup, 
-  updateProfile 
-} from "firebase/auth";
-import { auth, googleProvider } from "../lib/firebase";
+import React from "react";
+import { motion } from "framer-motion";
 
-import { AuthInput } from "../components/auth/AuthInput";
-import { AuthHeader } from "../components/auth/AuthHeader";
-import { SocialLogin } from "../components/auth/SocialLogin";
-
-type AuthMode = "signin" | "signup" | "forgot-password";
-
-interface FirebaseError {
-  code: string;
-  message: string;
+interface SocialLoginProps {
+  onGoogleClick: () => void;
+  isLoading: boolean;
 }
 
-export default function AuthPage() {
-  const navigate = useNavigate();
-  const [mode, setMode] = useState<AuthMode>("signin");
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
-
-  const toggleMode = () => {
-    setMode(mode === "signin" ? "signup" : "signin");
-    setErrors({});
-    setFormData({ name: "", email: "", password: "", confirmPassword: "" });
-  };
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (mode === "signup" && !formData.name.trim()) {
-      newErrors.name = "Name is required";
-    }
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Invalid email address";
-    }
-
-    if (mode !== "forgot-password") {
-      if (!formData.password) {
-        newErrors.password = "Password is required";
-      } else if (formData.password.length < 6) {
-        newErrors.password = "Password must be at least 6 characters";
-      }
-      if (mode === "signup" && formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      await signInWithPopup(auth, googleProvider);
-      navigate("/home");
-    } catch (err) {
-      const error = err as FirebaseError;
-      console.error("Google Sign-In Error:", error.code);
-      setErrors({ auth: "Google login failed. Please try again." });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-
-    setIsLoading(true);
-    try {
-      if (mode === "signup") {
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        await updateProfile(userCredential.user, { displayName: formData.name });
-        navigate("/home");
-      } else if (mode === "signin") {
-        await signInWithEmailAndPassword(auth, formData.email, formData.password);
-        navigate("/home");
-      } else if (mode === "forgot-password") {
-        await sendPasswordResetEmail(auth, formData.email);
-        alert("Password reset link sent to your email!");
-        setMode("signin");
-      }
-    } catch (err) {
-      const error = err as FirebaseError;
-      console.error("Auth Error:", error.code);
-      
-      // Map Firebase codes to user-friendly messages
-      const msg = error.code === "auth/user-not-found" ? "No account found with this email." :
-                  error.code === "auth/wrong-password" ? "Incorrect password." :
-                  error.code === "auth/email-already-in-use" ? "This email is already registered." :
-                  "Authentication failed. Please try again.";
-      
-      setErrors({ auth: msg });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+export const SocialLogin: React.FC<SocialLoginProps> = ({
+  onGoogleClick,
+  isLoading,
+}) => {
   return (
-    <div className="h-screen w-full bg-ivory flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Watermark */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.02]">
-        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-serif text-[20rem] text-charcoal whitespace-nowrap">
-          JURIBOT
-        </span>
+    <div className="mt-6">
+      <div className="relative mb-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-charcoal/10" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-ivory px-2 text-charcoal/40 font-medium">
+            Or continue with
+          </span>
+        </div>
       </div>
 
-      <div className="relative w-full max-w-md">
-        <Link
-          to="/"
-          state={{ skipLoading: true }}
-          className="absolute -top-12 left-0 md:-left-24 md:top-0 text-gold hover:text-coffee transition-colors z-50 flex items-center gap-2 group"
+      <motion.button
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        onClick={onGoogleClick}
+        disabled={isLoading}
+        type="button"
+        className="w-full bg-white border border-charcoal/10 text-charcoal py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group cursor-pointer"
+      >
+        <svg
+          className="w-5 h-5"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-sans font-bold tracking-wider text-sm">BACK</span>
-        </Link>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full bg-white/50 backdrop-blur-sm border border-charcoal/10 rounded-2xl shadow-xl overflow-hidden relative z-10"
-        >
-          <div className="p-8">
-            <AuthHeader mode={mode} />
-
-            {errors.auth && (
-              <p className="text-red-500 text-sm text-center mb-4 font-medium">{errors.auth}</p>
-            )}
-
-            <form onSubmit={handleSubmit} className="flex flex-col">
-              <AnimatePresence mode="wait">
-                {mode === "signup" && (
-                  <motion.div
-                    key="name-field"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <AuthInput
-                      type="text"
-                      placeholder="Full Name"
-                      value={formData.name}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      icon={User}
-                      error={errors.name}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <AuthInput
-                type="email"
-                placeholder="Email Address"
-                value={formData.email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-                icon={Mail}
-                error={errors.email}
-              />
-
-              <AnimatePresence mode="wait">
-                {mode !== "forgot-password" && (
-                  <motion.div
-                    key="password-field"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <AuthInput
-                      type="password"
-                      placeholder="Password"
-                      value={formData.password}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                      icon={Lock}
-                      error={errors.password}
-                      showPasswordToggle
-                      isPasswordVisible={showPassword}
-                      onTogglePassword={() => setShowPassword(!showPassword)}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <AnimatePresence mode="wait">
-                {mode === "signup" && (
-                  <motion.div
-                    key="confirm-password-field"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <AuthInput
-                      type="password"
-                      placeholder="Confirm Password"
-                      value={formData.confirmPassword}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setFormData({ ...formData, confirmPassword: e.target.value })
-                      }
-                      icon={Lock}
-                      error={errors.confirmPassword}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {mode === "signin" && (
-                <div className="flex justify-end mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setMode("forgot-password")}
-                    className="text-xs text-charcoal/60 hover:text-coffee transition-colors cursor-pointer"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-charcoal text-ivory py-3 rounded-lg font-medium hover:bg-coffee transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed group cursor-pointer"
-              >
-                {isLoading ? (
-                  <div className="w-5 h-5 border-2 border-ivory/30 border-t-ivory rounded-full animate-spin" />
-                ) : (
-                  <>
-                    {mode === "signin" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </button>
-
-              {mode === "forgot-password" && (
-                <button
-                  type="button"
-                  onClick={() => setMode("signin")}
-                  className="w-full mt-4 text-charcoal/60 hover:text-coffee transition-colors text-sm font-medium cursor-pointer"
-                >
-                  Back to Sign In
-                </button>
-              )}
-            </form>
-
-            {mode !== "forgot-password" && (
-              <>
-                <SocialLogin onGoogleClick={handleGoogleSignIn} isLoading={isLoading} />
-
-                <div className="mt-8 text-center">
-                  <p className="text-charcoal/60 text-sm">
-                    {mode === "signin" ? "Don't have an account?" : "Already have an account?"}
-                    <button
-                      onClick={toggleMode}
-                      className="ml-2 text-coffee font-medium hover:underline focus:outline-none cursor-pointer"
-                    >
-                      {mode === "signin" ? "Sign Up" : "Sign In"}
-                    </button>
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-        </motion.div>
-      </div>
+          <path
+            d="M20.64 12.2045C20.64 11.4034 20.5847 10.6121 20.45 9.92139H12.2136V12.8718H17.067C16.9749 13.9022 16.514 15.6599 15.0217 16.7118L14.9961 16.8524L17.6015 18.825L17.7831 18.8432C19.4184 17.3676 20.64 15.0211 20.64 12.2045Z"
+            fill="#4285F4"
+          />
+          <path
+            d="M12.2137 20.6399C14.5882 20.6399 16.5768 19.8665 18.0317 18.5447L15.0218 16.206C14.285 16.7027 13.3197 17.0251 12.2173 17.0251C9.88879 17.0251 7.91526 15.4852 7.2023 13.3855L7.06764 13.3969L4.36859 15.4419L4.32178 15.5714C5.77665 18.4063 8.76101 20.6399 12.2137 20.6399Z"
+            fill="#34A853"
+          />
+          <path
+            d="M7.20223 13.3855C7.01804 12.8443 6.91485 12.2681 6.91485 11.6661C6.91485 11.0642 7.01436 10.4879 7.19486 9.94672L7.18953 9.79153L4.4754 7.71973L4.32171 7.76077C3.12301 10.1197 3.12301 13.2125 4.32171 15.5714L7.20223 13.3855Z"
+            fill="#FBBC05"
+          />
+          <path
+            d="M12.2137 6.30713C13.8439 6.30713 15.0033 7.00031 15.6265 7.58288L18.1091 5.16042C16.5731 3.75549 14.5846 2.69238 12.2137 2.69238C8.76101 2.69238 5.77665 4.92598 4.32178 7.76077L7.19493 9.94672C7.91157 7.84705 9.88879 6.30713 12.2137 6.30713Z"
+            fill="#EB4335"
+          />
+        </svg>
+        Google
+      </motion.button>
     </div>
   );
-}
+};
