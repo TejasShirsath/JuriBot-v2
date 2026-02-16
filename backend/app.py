@@ -35,7 +35,7 @@ llm = ChatOpenAI(
 
 @app.route("/upload", methods=["POST"])
 def upload():
-    return upload_route(embeddings)
+    return upload_route(embeddings, llm)
 
 
 @app.route("/chat", methods=["POST"])
