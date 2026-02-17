@@ -20,6 +20,7 @@ def chat_route(embeddings, llm):
 
     document_id = data["document_id"]
     question = data["question"]
+    history = data.get("history", [])  # list of {"role": "user"|"assistant", "content": "..."}
 
     index_path = f"{INDEX_FOLDER}/{document_id}"
 
@@ -30,16 +31,24 @@ def chat_route(embeddings, llm):
 
     context = "\n\n".join([d.page_content for d in docs])
 
+    # Build conversation history string
+    history_text = ""
+    if history:
+        history_text = "\n\nConversation History:\n"
+        for msg in history:
+            role_label = "User" if msg["role"] == "user" else "Assistant"
+            history_text += f"{role_label}: {msg['content']}\n"
+
     prompt = f"""
     You are Juribot, a legal assistant.
 
-    Context:
+    Document Context:
     {context}
-
-    Question:
+    {history_text}
+    Current Question:
     {question}
 
-    Answer clearly:
+    Answer clearly and concisely, taking the conversation history into account if relevant:
     """
 
     response = llm.invoke(prompt)
