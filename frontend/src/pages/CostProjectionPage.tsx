@@ -25,9 +25,21 @@ import {
 } from "../components/common/StatusComponents";
 import { StyledSelect } from "../components/common/StyledSelect";
 
+const API_BASE = import.meta.env.VITE_API_URL;
+
+interface CostResult {
+  legal_fees: number;
+  court_fees: number;
+  filing_admin_fees: number;
+  miscellaneous_fees: number;
+  total_cost: number;
+}
+
 const CostProjectionPage = () => {
   const [showResults, setShowResults] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<CostResult | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -39,25 +51,51 @@ const CostProjectionPage = () => {
     lawyerLevel: "Mid-Senior",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setShowResults(false);
-    setTimeout(() => {
-      setLoading(false);
+    setError(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/cost_estimator`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          case_type: formData.caseType,
+          jurisdiction: formData.jurisdiction,
+          location: formData.location,
+          complexity: formData.complexity,
+          duration_months: formData.duration,
+          lawyer_level: formData.lawyerLevel,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Something went wrong");
+      }
+
+      setResult(data);
       setShowResults(true);
-    }, 1500);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to get estimate");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock Data for Charts
-  const costData = [
-    { name: "Legal Fees", value: 450000, color: "#C5A059" },
-    { name: "Court Fees", value: 50000, color: "#2C2C2C" },
-    { name: "Filing & Admin", value: 25000, color: "#E5E5E5" },
-    { name: "Miscellaneous", value: 30000, color: "#A8A8A8" },
-  ];
+  const costData = result
+    ? [
+        { name: "Legal Fees", value: result.legal_fees, color: "#C5A059" },
+        { name: "Court Fees", value: result.court_fees, color: "#2C2C2C" },
+        { name: "Filing & Admin", value: result.filing_admin_fees, color: "#E5E5E5" },
+        { name: "Miscellaneous", value: result.miscellaneous_fees, color: "#A8A8A8" },
+      ]
+    : [];
 
-  const totalCost = costData.reduce((acc, curr) => acc + curr.value, 0);
+  const totalCost = result?.total_cost ?? 0;
 
   return (
     <PageLayout sectionTitle="Cost Projection">
@@ -239,12 +277,18 @@ const CostProjectionPage = () => {
         {/* Right: Results View */}
         <div className="lg:col-span-8 relative min-h-125 h-auto pb-10 mt-8 lg:mt-0">
           <AnimatePresence>
-            {!showResults && !loading && (
+            {!showResults && !loading && !error && (
               <EmptyState
                 icon={PieChart}
                 title="Ready to Estimate"
                 description="Fill out the case parameters on the left to generate a detailed financial projection."
               />
+            )}
+
+            {error && !loading && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-700 text-sm">
+                <strong>Error:</strong> {error}
+              </div>
             )}
 
             {loading && <LoadingOverlay message="Analyzing Market Rates..." />}
@@ -261,16 +305,14 @@ const CostProjectionPage = () => {
               >
                 <div className="bg-charcoal p-8 text-ivory">
                   <p className="text-sm font-bold tracking-widest opacity-60 uppercase mb-2">
-                    Estimated Total Cost Range
+                    Estimated Total Cost
                   </p>
                   <div className="flex items-baseline gap-2">
                     <IndianRupee size={32} className="text-gold" />
                     <h2 className="text-5xl md:text-6xl font-serif font-bold text-white tracking-tight">
-                      4.5L{" "}
-                      <span className="text-2xl opacity-50 font-sans font-normal">
-                        -
-                      </span>{" "}
-                      6.2L
+                      {totalCost >= 100000
+                        ? `${(totalCost / 100000).toFixed(1)}L`
+                        : `${(totalCost / 1000).toFixed(0)}k`}
                     </h2>
                   </div>
                   <p className="text-sm mt-4 text-white/60">
@@ -339,7 +381,9 @@ const CostProjectionPage = () => {
                           </span>
                         </div>
                         <span className="text-sm font-bold text-charcoal">
-                          ₹{(item.value / 1000).toFixed(0)}k
+                          ₹{item.value >= 100000
+                            ? `${(item.value / 100000).toFixed(1)}L`
+                            : `${(item.value / 1000).toFixed(0)}k`}
                         </span>
                       </div>
                     ))}
