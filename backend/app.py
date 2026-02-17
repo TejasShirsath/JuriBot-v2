@@ -12,6 +12,7 @@ from langchain_openai import ChatOpenAI
 # Import routes
 from routes.upload import upload_route
 from routes.chat import chat_route
+from routes.cost_estimator import cost_estimator_route
 
 app = Flask(__name__)
 CORS(app)
@@ -41,6 +42,10 @@ def upload():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     return chat_route(embeddings, llm)
+
+@app.route("/api/cost_estimator", methods=["POST"])
+def cost_estimator():
+    return cost_estimator_route()
 
 
 if __name__ == "__main__":
