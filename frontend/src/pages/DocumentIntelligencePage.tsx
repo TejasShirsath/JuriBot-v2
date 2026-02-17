@@ -60,6 +60,11 @@ function parseComplexityScore(raw: string): {
   return { score, label, justification };
 }
 
+interface ChatHistoryEntry {
+  role: "user" | "assistant";
+  content: string;
+}
+
 const DocumentIntelligencePage = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -69,6 +74,7 @@ const DocumentIntelligencePage = () => {
   const [activeTab, setActiveTab] = useState<"summary" | "clauses" | "stats">(
     "summary"
   );
+  const [chatHistory, setChatHistory] = useState<ChatHistoryEntry[]>([]);
 
   const startAnalysis = async (uploadedFile: File) => {
     setFile(uploadedFile);
@@ -106,6 +112,41 @@ const DocumentIntelligencePage = () => {
     setAnalysis(null);
     setFile(null);
     setError(null);
+    setChatHistory([]);
+  };
+
+  const handleSendMessage = async (text: string): Promise<string> => {
+    if (!analysis) return "Please upload a document first to start chatting.";
+
+    const currentHistory = [...chatHistory];
+
+    try {
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          document_id: analysis.document_id,
+          question: text,
+          history: currentHistory,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`Chat request failed (${res.status})`);
+
+      const data = await res.json();
+      const answer: string = data.answer;
+
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "user", content: text },
+        { role: "assistant", content: answer },
+      ]);
+
+      return answer;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Chat failed";
+      return `Error: ${message}`;
+    }
   };
 
   const complexity = analysis
@@ -393,6 +434,7 @@ const DocumentIntelligencePage = () => {
               "What are the penalties for breach?",
               "Who are the parties involved?",
             ]}
+            onSendMessage={handleSendMessage}
             className="h-full shadow-lg border-stone-200"
           />
         </div>
