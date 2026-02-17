@@ -3,8 +3,8 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from parent directory
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+# Load environment variables from current directory
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
@@ -23,9 +23,9 @@ os.makedirs(INDEX_FOLDER, exist_ok=True)
 # Embeddings (load once)
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-# Ollama LLM
+# GPT-OSS LLM
 llm = ChatOpenAI(
-    model="openai/gpt-oss-20b:free",
+    model= os.getenv("LLM_MODEL"),
     openai_api_key=os.getenv("OPENROUTER_API_KEY"),
     openai_api_base="https://openrouter.ai/api/v1",
     temperature=0
@@ -33,12 +33,12 @@ llm = ChatOpenAI(
 
 # ---------------- ROUTES ----------------
 
-@app.route("/upload", methods=["POST"])
+@app.route("/api/upload", methods=["POST"])
 def upload():
     return upload_route(embeddings, llm)
 
 
-@app.route("/chat", methods=["POST"])
+@app.route("/api/chat", methods=["POST"])
 def chat():
     return chat_route(embeddings, llm)
 
