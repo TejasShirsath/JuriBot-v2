@@ -13,6 +13,7 @@ from langchain_openai import ChatOpenAI
 from routes.upload import upload_route
 from routes.chat import chat_route
 from routes.cost_estimator import cost_estimator_route
+from routes.verdict_analytics import verdict_analytics_route
 
 app = Flask(__name__)
 CORS(app)
@@ -27,8 +28,8 @@ embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 # GPT-OSS LLM
 llm = ChatOpenAI(
     model= os.getenv("LLM_MODEL"),
-    openai_api_key=os.getenv("OPENROUTER_API_KEY"),
-    openai_api_base="https://openrouter.ai/api/v1",
+    openai_api_key=os.getenv("LLM_API_KEY"),
+    #openai_api_base= os.getenv("LLM_API_BASE"),
     temperature=0
 )
 
@@ -38,7 +39,6 @@ llm = ChatOpenAI(
 def upload():
     return upload_route(embeddings, llm)
 
-
 @app.route("/api/chat", methods=["POST"])
 def chat():
     return chat_route(embeddings, llm)
@@ -46,6 +46,10 @@ def chat():
 @app.route("/api/cost_estimator", methods=["POST"])
 def cost_estimator():
     return cost_estimator_route()
+
+@app.route("/api/verdict_analytics", methods=["POST"])
+def verdict_analytics():
+    return verdict_analytics_route()
 
 
 if __name__ == "__main__":
