@@ -22,34 +22,92 @@ import {
 } from "../components/common/StatusComponents";
 import { StyledSelect } from "../components/common/StyledSelect";
 
+const API_BASE = import.meta.env.VITE_API_URL;
+
+interface Precedent {
+  case_id: string;
+  case_name: string;
+  court: string;
+  year: number;
+  status: string;
+  summary: string;
+}
+
+interface VerdictResult {
+  status: string;
+  meta: { category: string; jurisdiction: string };
+  summary: {
+    similar_cases_found: number;
+    avg_case_duration_years: number;
+    dominant_outcome: { label: string; probability_percent: number };
+  };
+  outcome_probability_distribution: {
+    win: number;
+    settled: number;
+    lost: number;
+  };
+  top_precedents: Precedent[];
+}
+
+const OUTCOME_COLORS: Record<string, string> = {
+  Win: "#10B981",
+  Settled: "#F59E0B",
+  Lost: "#EF4444",
+};
+
 const VerdictAnalyticsPage = () => {
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<VerdictResult | null>(null);
 
   const [formData, setFormData] = useState({
     caseCategory: "Corporate Dispute",
     jurisdiction: "Delhi High Court",
-    yearRange: [2018, 2024],
-    opponentType: "Corporate Entity",
     facts: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setShowResults(false);
-    setTimeout(() => {
-      setLoading(false);
+    setError(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/verdict_analytics`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: formData.caseCategory,
+          jurisdiction: formData.jurisdiction,
+          key_facts_summary: formData.facts,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Something went wrong");
+      }
+
+      setResult(data);
       setShowResults(true);
-    }, 2000);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch analytics"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock Data
-  const outcomeData = [
-    { name: "Win", value: 65, color: "#10B981" },
-    { name: "Settled", value: 20, color: "#F59E0B" },
-    { name: "Lost", value: 15, color: "#EF4444" },
-  ];
+  const outcomeData = result
+    ? [
+        { name: "Win", value: result.outcome_probability_distribution.win, color: OUTCOME_COLORS.Win },
+        { name: "Settled", value: result.outcome_probability_distribution.settled, color: OUTCOME_COLORS.Settled },
+        { name: "Lost", value: result.outcome_probability_distribution.lost, color: OUTCOME_COLORS.Lost },
+      ]
+    : [];
 
   return (
     <PageLayout sectionTitle="Verdict Analytics">
@@ -150,7 +208,17 @@ const VerdictAnalyticsPage = () => {
 
             {loading && <LoadingOverlay message="Mining Legal Database..." />}
 
-            {showResults && (
+            {error && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            {showResults && result && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -162,7 +230,9 @@ const VerdictAnalyticsPage = () => {
                     <p className="text-xs font-bold text-charcoal/40 uppercase mb-2">
                       Similar Cases Found
                     </p>
-                    <p className="text-4xl font-serif text-charcoal">1,248</p>
+                    <p className="text-4xl font-serif text-charcoal">
+                      {result.summary.similar_cases_found.toLocaleString()}
+                    </p>
                     <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
                       <TrendingUp size={12} /> High relevance
                     </p>
@@ -172,7 +242,7 @@ const VerdictAnalyticsPage = () => {
                       Avg. Case Duration
                     </p>
                     <p className="text-4xl font-serif text-charcoal">
-                      2.4{" "}
+                      {result.summary.avg_case_duration_years}{" "}
                       <span className="text-lg font-sans text-charcoal/40">
                         Years
                       </span>
@@ -182,9 +252,16 @@ const VerdictAnalyticsPage = () => {
                     <p className="text-xs font-bold text-charcoal/40 uppercase mb-2">
                       Dominant Outcome
                     </p>
-                    <p className="text-4xl font-serif text-green-600">Win</p>
+                    <p className={clsx(
+                      "text-4xl font-serif",
+                      result.summary.dominant_outcome.label === "win" ? "text-green-600" :
+                      result.summary.dominant_outcome.label === "lost" ? "text-red-600" :
+                      "text-amber-600"
+                    )}>
+                      {result.summary.dominant_outcome.label.charAt(0).toUpperCase() + result.summary.dominant_outcome.label.slice(1)}
+                    </p>
                     <p className="text-xs text-charcoal/40 mt-1">
-                      65% probability
+                      {result.summary.dominant_outcome.probability_percent}% probability
                     </p>
                   </Card>
                 </div>
@@ -239,33 +316,9 @@ const VerdictAnalyticsPage = () => {
                     </span>
                   </h4>
                   <div className="space-y-4">
-                    {[
-                      {
-                        title: "TechSolutions Ltd v. Innovate Corp",
-                        year: "2023",
-                        outcome: "Allowed",
-                        court: "Delhi High Court",
-                        summary:
-                          "Court upheld the confidentiality clause citing clear definition of trade secrets.",
-                      },
-                      {
-                        title: "State Bank v. Vijay Kumar",
-                        year: "2021",
-                        outcome: "Dismissed",
-                        court: "Supreme Court",
-                        summary:
-                          "Appeal dismissed due to lack of substantial evidence regarding breach.",
-                      },
-                      {
-                        title: "Global Systems v. Union of India",
-                        year: "2022",
-                        outcome: "Pending",
-                        court: "Bombay High Court",
-                        summary: "Interim relief granted to the petitioner.",
-                      },
-                    ].map((c, i) => (
+                    {result.top_precedents.map((c, i) => (
                       <Card
-                        key={i}
+                        key={c.case_id || i}
                         animate
                         motionProps={{
                           initial: { opacity: 0, x: 20 },
@@ -277,7 +330,7 @@ const VerdictAnalyticsPage = () => {
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h5 className="font-serif font-bold text-lg text-charcoal group-hover:text-coffee transition-colors">
-                              {c.title}
+                              {c.case_name}
                             </h5>
                             <p className="text-xs text-charcoal/50 flex items-center gap-2 mt-1">
                               <Gavel size={12} /> {c.court} •{" "}
@@ -287,14 +340,14 @@ const VerdictAnalyticsPage = () => {
                           <span
                             className={clsx(
                               "text-xs font-bold px-3 py-1 rounded-full border",
-                              c.outcome === "Allowed"
+                              c.status === "allowed"
                                 ? "bg-green-50 text-green-700 border-green-200"
-                                : c.outcome === "Dismissed"
+                                : c.status === "dismissed"
                                 ? "bg-red-50 text-red-700 border-red-200"
                                 : "bg-amber-50 text-amber-700 border-amber-200"
                             )}
                           >
-                            {c.outcome}
+                            {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                           </span>
                         </div>
                         <p className="text-sm text-charcoal/70 leading-relaxed">

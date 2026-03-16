@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "motion/react";
 import { Bot } from "lucide-react";
 
@@ -5,7 +6,48 @@ import { PageLayout } from "../components/common/PageLayout";
 import { PageHeader } from "../components/common/PageHeader";
 import { ChatInterface } from "../components/common/ChatInterface";
 
+const API_BASE = import.meta.env.VITE_API_URL;
+
+interface ChatHistoryEntry {
+  role: "user" | "assistant";
+  content: string;
+}
+
 const VirtualCounselPage = () => {
+  const [chatHistory, setChatHistory] = useState<ChatHistoryEntry[]>([]);
+
+  const handleSendMessage = async (text: string): Promise<string> => {
+    const currentHistory = [...chatHistory];
+
+    try {
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // No document_id here – pure Virtual Counsel mode
+          question: text,
+          history: currentHistory,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`Chat request failed (${res.status})`);
+
+      const data = await res.json();
+      const answer: string = data.answer;
+
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "user", content: text },
+        { role: "assistant", content: answer },
+      ]);
+
+      return answer;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Chat failed";
+      return `Error: ${message}`;
+    }
+  };
+
   return (
     <PageLayout sectionTitle="Virtual Counsel" className="pb-0" fixedHeight>
       <PageHeader
@@ -31,6 +73,7 @@ const VirtualCounselPage = () => {
             "Explain 'Force Majeure' in simple terms.",
             "What are the rights of an arrested person?",
           ]}
+          onSendMessage={handleSendMessage}
           className="h-full shadow-xl border-stone-200"
           initialMessages={[
             {

@@ -29,7 +29,7 @@ embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 llm = ChatOpenAI(
     model= os.getenv("LLM_MODEL"),
     openai_api_key=os.getenv("LLM_API_KEY"),
-    #openai_api_base= os.getenv("LLM_API_BASE"),
+    openai_api_base= os.getenv("LLM_API_BASE"),
     temperature=0
 )
 
