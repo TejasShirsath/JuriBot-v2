@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 # Load environment variables from current directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
-from langchain_huggingface import HuggingFaceEmbeddings
+# from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 
 # Import routes
@@ -23,13 +24,17 @@ INDEX_FOLDER = "indexes"
 os.makedirs(INDEX_FOLDER, exist_ok=True)
 
 # Embeddings (load once)
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = OpenAIEmbeddings(
+        model= os.getenv("EMBEDDING_MODEL"),
+        api_key=os.getenv("LLM_API_KEY"),
+        base_url=os.getenv("LLM_API_BASE")
+    )
 
-# GPT-OSS LLM
+# LLM configuration (load once)
 llm = ChatOpenAI(
     model= os.getenv("LLM_MODEL"),
     openai_api_key=os.getenv("LLM_API_KEY"),
-    #openai_api_base= os.getenv("LLM_API_BASE"),
+    openai_api_base= os.getenv("LLM_API_BASE"),
     temperature=0
 )
 

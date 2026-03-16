@@ -12,7 +12,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 model = LiteLLMModel(
     model_id= os.getenv("LLM_MODEL"),
     api_key=os.getenv("LLM_API_KEY"),
-    #api_base= os.getenv("LLM_API_BASE"),
+    api_base= os.getenv("LLM_API_BASE"),
     temperature=0
 )
 

@@ -3,3 +3,4 @@ indexes/
 .env
 .ipynb_checkpoints/
 *.pyc
+/venv/
