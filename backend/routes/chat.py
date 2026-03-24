@@ -45,6 +45,7 @@ def chat_route(embeddings, llm):
         JSON response with answer
     """
     data = request.json or {}
+    data = request.json or {}
 
     document_id = data.get("document_id")
     question = data["question"]
@@ -64,7 +65,10 @@ def chat_route(embeddings, llm):
         index_path = f"{INDEX_FOLDER}/{document_id}"
 
         db = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+        db = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
 
+        retriever = db.as_retriever(k=3)
+        docs = retriever.invoke(question)
         retriever = db.as_retriever(k=3)
         docs = retriever.invoke(question)
 
