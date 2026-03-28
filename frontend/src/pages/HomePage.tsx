@@ -70,6 +70,8 @@ function HomePage() {
 
       setMessages((prev) => [...prev, userMessage]);
       setIsTyping(true);
+      // Clear uploaded document after sending
+      setUploadedDoc(null);
       // Don't start talking animation yet - stay idle or frozen until response
 
       try {
