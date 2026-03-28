@@ -5,6 +5,7 @@ import { LawyerAnimation } from "../components/home/LawyerAnimation";
 import { HomeChatInterface } from "../components/home/HomeChatInterface";
 import type { Message, UploadedDocument } from "../components/home/HomeChatInterface";
 import { useAnimationState } from "../hooks/useAnimationState";
+import { useTextToSpeech } from "../hooks/useTextToSpeech";
 import { uploadDocument, sendChatMessage } from "../services/api";
 import type { ChatMessage } from "../services/api";
 
@@ -17,6 +18,8 @@ function HomePage() {
     finishTalking,
     resetDocument,
   } = useAnimationState();
+
+  const { speak, stop } = useTextToSpeech({ pitch: 1.2, rate: 0.95 });
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [uploadedDoc, setUploadedDoc] = useState<UploadedDocument | null>(null);
@@ -51,6 +54,9 @@ function HomePage() {
 
   const handleSendMessage = useCallback(
     async (text: string) => {
+      // Stop any ongoing speech
+      stop();
+
       const userMessage: Message = {
         id: Date.now().toString(),
         role: "user",
@@ -78,6 +84,9 @@ function HomePage() {
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
+
+        // Speak the response
+        speak(response.answer);
       } catch (error) {
         console.error("Chat failed:", error);
         const errorMessage: Message = {
@@ -87,12 +96,13 @@ function HomePage() {
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, errorMessage]);
+        speak("I apologize, but I encountered an error. Please try again.");
       } finally {
         setIsTyping(false);
         finishTalking();
       }
     },
-    [messages, uploadedDoc, startTalking, finishTalking]
+    [messages, uploadedDoc, startTalking, finishTalking, speak, stop]
   );
 
   const handleRemoveDocument = useCallback(() => {
