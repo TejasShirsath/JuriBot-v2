@@ -1,13 +1,17 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 
 interface UseTTSOptions {
   rate?: number;
   pitch?: number;
   volume?: number;
+  onStart?: () => void;
+  onEnd?: () => void;
 }
 
 export function useTextToSpeech(options: UseTTSOptions = {}) {
-  const { rate = 1, pitch = 1.2, volume = 1 } = options;
+  const { rate = 1, pitch = 1.2, volume = 1, onStart, onEnd } = options;
+  const callbacksRef = useRef({ onStart, onEnd });
+  callbacksRef.current = { onStart, onEnd };
 
   const speak = useCallback(
     (text: string) => {
@@ -36,6 +40,18 @@ export function useTextToSpeech(options: UseTTSOptions = {}) {
       utterance.rate = rate;
       utterance.pitch = pitch;
       utterance.volume = volume;
+
+      utterance.onstart = () => {
+        callbacksRef.current.onStart?.();
+      };
+
+      utterance.onend = () => {
+        callbacksRef.current.onEnd?.();
+      };
+
+      utterance.onerror = () => {
+        callbacksRef.current.onEnd?.();
+      };
 
       speechSynthesis.speak(utterance);
     },

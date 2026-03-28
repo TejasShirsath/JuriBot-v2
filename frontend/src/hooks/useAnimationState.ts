@@ -3,6 +3,7 @@ import { useState, useCallback } from "react";
 export type AnimationState =
   | "idle"
   | "reading"
+  | "reading_frozen"
   | "talking"
   | "talking_after_read";
 
@@ -21,10 +22,10 @@ export function useAnimationState() {
     setConfig((prev) => ({ ...prev, currentState: "reading" }));
   }, []);
 
-  const finishReading = useCallback(() => {
+  const freezeReading = useCallback(() => {
     setConfig((prev) => ({
       ...prev,
-      currentState: "talking_after_read",
+      currentState: "reading_frozen",
       hasDocument: true,
     }));
   }, []);
@@ -41,14 +42,14 @@ export function useAnimationState() {
   }, []);
 
   const resetDocument = useCallback(() => {
-    setConfig((prev) => ({ ...prev, hasDocument: false }));
+    setConfig((prev) => ({ ...prev, hasDocument: false, currentState: "idle" }));
   }, []);
 
   return {
     currentState: config.currentState,
     hasDocument: config.hasDocument,
     startReading,
-    finishReading,
+    freezeReading,
     startTalking,
     finishTalking,
     resetDocument,

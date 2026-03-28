@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import { motion } from "motion/react";
 import { PageLayout } from "../components/common/PageLayout";
 import { LawyerAnimation } from "../components/home/LawyerAnimation";
 import { HomeChatInterface } from "../components/home/HomeChatInterface";
@@ -13,13 +12,17 @@ function HomePage() {
   const {
     currentState,
     startReading,
-    finishReading,
+    freezeReading,
     startTalking,
     finishTalking,
     resetDocument,
   } = useAnimationState();
 
-  const { speak, stop } = useTextToSpeech({ pitch: 1.2, rate: 0.95 });
+  const { speak, stop } = useTextToSpeech({
+    pitch: 1.2,
+    rate: 0.95,
+    onEnd: finishTalking,
+  });
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [uploadedDoc, setUploadedDoc] = useState<UploadedDocument | null>(null);
@@ -49,8 +52,9 @@ function HomePage() {
   );
 
   const handleReadingComplete = useCallback(() => {
-    finishReading();
-  }, [finishReading]);
+    // Freeze the reading animation on last frame until next animation starts
+    freezeReading();
+  }, [freezeReading]);
 
   const handleSendMessage = useCallback(
     async (text: string) => {
@@ -66,7 +70,7 @@ function HomePage() {
 
       setMessages((prev) => [...prev, userMessage]);
       setIsTyping(true);
-      startTalking();
+      // Don't start talking animation yet - stay idle or frozen until response
 
       try {
         const history: ChatMessage[] = messages.map((m) => ({
@@ -85,7 +89,9 @@ function HomePage() {
 
         setMessages((prev) => [...prev, assistantMessage]);
 
-        // Speak the response
+        // Start talking animation when response is ready
+        startTalking();
+        // Speak the response - animation will stop when speech ends via onEnd callback
         speak(response.answer);
       } catch (error) {
         console.error("Chat failed:", error);
@@ -96,13 +102,13 @@ function HomePage() {
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, errorMessage]);
+        startTalking();
         speak("I apologize, but I encountered an error. Please try again.");
       } finally {
         setIsTyping(false);
-        finishTalking();
       }
     },
-    [messages, uploadedDoc, startTalking, finishTalking, speak, stop]
+    [messages, uploadedDoc, startTalking, speak, stop]
   );
 
   const handleRemoveDocument = useCallback(() => {

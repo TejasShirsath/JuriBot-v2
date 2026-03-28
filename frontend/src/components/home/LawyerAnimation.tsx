@@ -33,7 +33,6 @@ export const LawyerAnimation: React.FC<LawyerAnimationProps> = ({
   onReadingComplete,
 }) => {
   const videoRefs = useRef<Partial<Record<VideoKey, HTMLVideoElement>>>({});
-  const previousActiveVideo = useRef<VideoKey | null>(null);
   const [activeVideo, setActiveVideo] = useState<VideoKey>("idle");
   const [talkingAfterReadPhase, setTalkingAfterReadPhase] = useState<
     "intro" | "loop"
@@ -48,46 +47,53 @@ export const LawyerAnimation: React.FC<LawyerAnimationProps> = ({
     []
   );
 
-  const activateVideo = useCallback((key: VideoKey) => {
-    setActiveVideo(key);
+  // Play a specific video (restart if same video)
+  const playVideo = useCallback((key: VideoKey) => {
+    const video = videoRefs.current[key];
+    if (video) {
+      video.currentTime = 0;
+      video.play().catch(() => {});
+    }
   }, []);
 
+  // Pause all videos except the active one
+  const pauseOtherVideos = useCallback((exceptKey: VideoKey) => {
+    (Object.keys(VIDEO_SOURCES) as VideoKey[]).forEach((key) => {
+      if (key !== exceptKey) {
+        const video = videoRefs.current[key];
+        if (video) {
+          video.pause();
+        }
+      }
+    });
+  }, []);
+
+  // Determine which video should be active based on state
   useEffect(() => {
     if (state === "idle") {
-      activateVideo("idle");
+      setActiveVideo("idle");
+      pauseOtherVideos("idle");
+      playVideo("idle");
       setTalkingAfterReadPhase("intro");
     } else if (state === "reading") {
-      activateVideo("reading");
+      setActiveVideo("reading");
+      pauseOtherVideos("reading");
+      playVideo("reading");
+    } else if (state === "reading_frozen") {
+      // Keep reading video visible but paused on last frame - do nothing
     } else if (state === "talking") {
-      activateVideo(getRandomTalkingKey());
+      const talkingKey = getRandomTalkingKey();
+      setActiveVideo(talkingKey);
+      pauseOtherVideos(talkingKey);
+      playVideo(talkingKey);
     } else if (state === "talking_after_read") {
       if (talkingAfterReadPhase === "intro") {
-        activateVideo("talkingAfterRead");
-      } else if (!isTalkingKey(activeVideo)) {
-        activateVideo(getRandomTalkingKey());
+        setActiveVideo("talkingAfterRead");
+        pauseOtherVideos("talkingAfterRead");
+        playVideo("talkingAfterRead");
       }
     }
-  }, [state, talkingAfterReadPhase, activeVideo, activateVideo]);
-
-  useEffect(() => {
-    const previousKey = previousActiveVideo.current;
-    if (previousKey && previousKey !== activeVideo) {
-      const previousVideo = videoRefs.current[previousKey];
-      if (previousVideo) {
-        previousVideo.pause();
-      }
-    }
-
-    const currentVideo = videoRefs.current[activeVideo];
-    if (currentVideo) {
-      if (previousKey !== activeVideo) {
-        currentVideo.currentTime = 0;
-      }
-      currentVideo.play().catch(() => {});
-    }
-
-    previousActiveVideo.current = activeVideo;
-  }, [activeVideo]);
+  }, [state, pauseOtherVideos, playVideo]);
 
   const handleVideoEnded = useCallback(
     (key: VideoKey) => {
@@ -95,35 +101,43 @@ export const LawyerAnimation: React.FC<LawyerAnimationProps> = ({
         return;
       }
 
-      if (state === "reading" && key === "reading") {
+      // Reading animation ends - freeze on last frame, notify parent
+      if (key === "reading") {
         onReadingComplete?.();
+        // Don't set new video - stays frozen on last frame
         return;
       }
 
+      // Talking animations: loop randomly while in talking state
       if (state === "talking" && isTalkingKey(key)) {
-        activateVideo(getRandomTalkingKey());
+        const nextKey = getRandomTalkingKey();
+        setActiveVideo(nextKey);
+        pauseOtherVideos(nextKey);
+        playVideo(nextKey);
         return;
       }
 
+      // talking_after_read: first play intro, then loop talking
       if (state === "talking_after_read") {
         if (talkingAfterReadPhase === "intro" && key === "talkingAfterRead") {
           setTalkingAfterReadPhase("loop");
-          activateVideo(getRandomTalkingKey());
+          const nextKey = getRandomTalkingKey();
+          setActiveVideo(nextKey);
+          pauseOtherVideos(nextKey);
+          playVideo(nextKey);
           return;
         }
 
         if (talkingAfterReadPhase === "loop" && isTalkingKey(key)) {
-          activateVideo(getRandomTalkingKey());
+          const nextKey = getRandomTalkingKey();
+          setActiveVideo(nextKey);
+          pauseOtherVideos(nextKey);
+          playVideo(nextKey);
+          return;
         }
       }
     },
-    [
-      activeVideo,
-      state,
-      talkingAfterReadPhase,
-      onReadingComplete,
-      activateVideo,
-    ]
+    [activeVideo, state, talkingAfterReadPhase, onReadingComplete, pauseOtherVideos, playVideo]
   );
 
   return (
