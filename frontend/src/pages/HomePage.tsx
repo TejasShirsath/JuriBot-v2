@@ -66,6 +66,7 @@ function HomePage() {
         role: "user",
         text,
         timestamp: new Date(),
+        document: uploadedDoc || undefined,
       };
 
       setMessages((prev) => [...prev, userMessage]);

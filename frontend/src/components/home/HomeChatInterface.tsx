@@ -16,6 +16,7 @@ export interface Message {
   role: "user" | "assistant";
   text: string;
   timestamp: Date;
+  document?: UploadedDocument;
 }
 
 export interface UploadedDocument {
@@ -248,6 +249,17 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
                   : "bg-charcoal text-white rounded-tr-none shadow-md"
               )}
             >
+              {msg.document && (
+                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/20">
+                  <FileText size={14} className="text-coffee shrink-0" />
+                  <span className="truncate max-w-[200px] font-medium">
+                    {msg.document.name}
+                  </span>
+                  <span className="text-xs opacity-60">
+                    ({formatFileSize(msg.document.size)})
+                  </span>
+                </div>
+              )}
               {msg.text}
             </div>
           </div>
