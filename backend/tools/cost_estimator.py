@@ -22,7 +22,7 @@ TARGET_FIELDS = [
     "miscellaneous_fees",
 ]
 
-CSV_PATH = os.path.join(os.path.dirname(__file__), "ml_resource", "cost_estimation_dataset.csv")
+CSV_PATH = os.path.join(os.path.dirname(__file__), "resource", "ml_resource", "cost_estimation_dataset.csv")
 
 
 def predict_cost(input_data: dict) -> dict:
