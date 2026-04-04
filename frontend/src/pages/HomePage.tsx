@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { PageLayout } from "../components/common/PageLayout";
 import { LawyerAnimation } from "../components/home/LawyerAnimation";
 import { HomeChatInterface } from "../components/home/HomeChatInterface";
@@ -18,16 +18,24 @@ function HomePage() {
     resetDocument,
   } = useAnimationState();
 
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
   const { speak, stop } = useTextToSpeech({
     pitch: 1.2,
     rate: 0.95,
-    onEnd: finishTalking,
+    onStart: () => setIsSpeaking(true),
+    onEnd: () => {
+      setIsSpeaking(false);
+      finishTalking();
+    },
   });
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [uploadedDoc, setUploadedDoc] = useState<UploadedDocument | null>(null);
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleFileUpload = useCallback(
     async (file: File) => {
@@ -58,8 +66,18 @@ function HomePage() {
 
   const handleSendMessage = useCallback(
     async (text: string) => {
+      console.log("[HomePage] Sending message with tool:", selectedTool);
       // Stop any ongoing speech
       stop();
+
+      // Cancel any previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      // Create new abort controller for this request
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -71,8 +89,9 @@ function HomePage() {
 
       setMessages((prev) => [...prev, userMessage]);
       setIsTyping(true);
-      // Clear uploaded document after sending
+      // Clear uploaded document and selected tool after sending
       setUploadedDoc(null);
+      setSelectedTool(null);
       // Don't start talking animation yet - stay idle or frozen until response
 
       try {
@@ -81,13 +100,25 @@ function HomePage() {
           content: m.text,
         }));
 
-        const response = await sendChatMessage(text, uploadedDoc?.id, history);
+        const response = await sendChatMessage(
+          text,
+          uploadedDoc?.id,
+          history,
+          selectedTool,
+          abortController.signal
+        );
+
+        // Check if request was aborted
+        if (abortController.signal.aborted) {
+          return;
+        }
 
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
           text: response.answer,
           timestamp: new Date(),
+          toolResult: response.tool_result,
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
@@ -97,6 +128,11 @@ function HomePage() {
         // Speak the response - animation will stop when speech ends via onEnd callback
         speak(response.answer);
       } catch (error) {
+        // Don't show error if request was aborted by user
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+        
         console.error("Chat failed:", error);
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -108,16 +144,36 @@ function HomePage() {
         startTalking();
         speak("I apologize, but I encountered an error. Please try again.");
       } finally {
-        setIsTyping(false);
+        if (!abortController.signal.aborted) {
+          setIsTyping(false);
+        }
+        abortControllerRef.current = null;
       }
     },
-    [messages, uploadedDoc, startTalking, speak, stop]
+    [messages, uploadedDoc, selectedTool, startTalking, speak, stop]
   );
 
   const handleRemoveDocument = useCallback(() => {
     setUploadedDoc(null);
     resetDocument();
   }, [resetDocument]);
+
+  const handleStopSpeaking = useCallback(() => {
+    // Abort any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    stop();
+    setIsSpeaking(false);
+    setIsTyping(false);
+    finishTalking();
+  }, [stop, finishTalking]);
+
+  const handleToolSelect = useCallback((tool: string | null) => {
+    console.log("[HomePage] Tool selected:", tool);
+    setSelectedTool(tool);
+  }, []);
 
   return (
     <PageLayout sectionTitle="Chat" backButton={false} fixedHeight={true} className="p-5 max-w-none! w-full">
@@ -137,9 +193,13 @@ function HomePage() {
             uploadedDocument={uploadedDoc}
             isProcessing={isProcessing}
             isTyping={isTyping}
+            isSpeaking={isSpeaking}
+            selectedTool={selectedTool}
             onFileUpload={handleFileUpload}
             onSendMessage={handleSendMessage}
             onRemoveDocument={handleRemoveDocument}
+            onStopSpeaking={handleStopSpeaking}
+            onToolSelect={handleToolSelect}
             className="flex-1"
           />
         </div>

@@ -8,8 +8,13 @@ import {
   Paperclip,
   X,
   FileText,
+  Square,
+  Plus,
+  Scale,
+  TrendingUp,
 } from "lucide-react";
 import clsx from "clsx";
+import { ToolResultRenderer } from "./ToolResultRenderer";
 
 export interface Message {
   id: string;
@@ -17,6 +22,7 @@ export interface Message {
   text: string;
   timestamp: Date;
   document?: UploadedDocument;
+  toolResult?: any;
 }
 
 export interface UploadedDocument {
@@ -30,9 +36,13 @@ interface HomeChatInterfaceProps {
   uploadedDocument: UploadedDocument | null;
   isProcessing: boolean;
   isTyping: boolean;
+  isSpeaking: boolean;
+  selectedTool: string | null;
   onFileUpload: (file: File) => void;
   onSendMessage: (text: string) => void;
   onRemoveDocument: () => void;
+  onStopSpeaking: () => void;
+  onToolSelect: (tool: string | null) => void;
   className?: string;
 }
 
@@ -51,6 +61,21 @@ const LANGUAGES = [
   { text: "ગુજરાતી", lang: "Gujarati" },
 ];
 
+const TOOLS = [
+  {
+    id: "cost_estimator",
+    name: "Cost Estimator",
+    description: "Estimate legal costs for your case",
+    icon: Scale,
+  },
+  {
+    id: "verdict_analytics",
+    name: "Verdict Analytics",
+    description: "Analyze case outcomes and precedents",
+    icon: TrendingUp,
+  },
+];
+
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -62,18 +87,24 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
   uploadedDocument,
   isProcessing,
   isTyping,
+  isSpeaking,
+  selectedTool,
   onFileUpload,
   onSendMessage,
   onRemoveDocument,
+  onStopSpeaking,
+  onToolSelect,
   className,
 }) => {
   const [inputText, setInputText] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [showToolMenu, setShowToolMenu] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const toolMenuRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
     if (scrollContainerRef.current) {
@@ -89,6 +120,24 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
     scrollToBottom();
   }, [messages, isTyping, scrollToBottom]);
 
+  // Close tool menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        toolMenuRef.current &&
+        !toolMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowToolMenu(false);
+      }
+    };
+
+    if (showToolMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showToolMenu]);
+
   const handleSendMessage = useCallback(() => {
     if (!inputText.trim() || isTyping) return;
     onSendMessage(inputText.trim());
@@ -102,16 +151,19 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
     }
   };
 
-  const handleFileSelect = (file: File) => {
-    if (
-      file.type === "application/pdf" ||
-      file.type ===
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-      file.type === "text/plain"
-    ) {
-      onFileUpload(file);
-    }
-  };
+  const handleFileSelect = useCallback(
+    (file: File) => {
+      if (
+        file.type === "application/pdf" ||
+        file.type ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        file.type === "text/plain"
+      ) {
+        onFileUpload(file);
+      }
+    },
+    [onFileUpload]
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -120,7 +172,7 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
       const file = e.dataTransfer.files[0];
       if (file) handleFileSelect(file);
     },
-    [onFileUpload]
+    [handleFileSelect]
   );
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -252,7 +304,7 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
               {msg.document && (
                 <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/20">
                   <FileText size={14} className="text-coffee shrink-0" />
-                  <span className="truncate max-w-[200px] font-medium">
+                  <span className="truncate max-w-50 font-medium">
                     {msg.document.name}
                   </span>
                   <span className="text-xs opacity-60">
@@ -261,6 +313,9 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
                 </div>
               )}
               {msg.text}
+              {msg.toolResult && (
+                <ToolResultRenderer result={msg.toolResult} />
+              )}
             </div>
           </div>
         ))}
@@ -296,7 +351,7 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
         <div className="px-4 pt-2">
           <div className="inline-flex items-center gap-2 px-3 py-2 bg-coffee/10 rounded-lg">
             <FileText size={14} className="text-coffee" />
-            <span className="text-xs text-charcoal font-medium truncate max-w-[200px]">
+            <span className="text-xs text-charcoal font-medium truncate max-w-50">
               {uploadedDocument.name}
             </span>
             <span className="text-xs text-charcoal/50">
@@ -304,6 +359,29 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
             </span>
             <button
               onClick={onRemoveDocument}
+              className="p-0.5 hover:bg-coffee/20 rounded transition-colors"
+            >
+              <X size={12} className="text-coffee" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tool selection chip */}
+      {selectedTool && (
+        <div className="px-4 pt-2">
+          <div className="inline-flex items-center gap-2 px-3 py-2 bg-coffee/10 rounded-lg">
+            {TOOLS.find((t) => t.id === selectedTool)?.icon && (
+              React.createElement(
+                TOOLS.find((t) => t.id === selectedTool)!.icon,
+                { size: 14, className: "text-coffee" }
+              )
+            )}
+            <span className="text-xs text-charcoal font-medium">
+              {TOOLS.find((t) => t.id === selectedTool)?.name}
+            </span>
+            <button
+              onClick={() => onToolSelect(null)}
               className="p-0.5 hover:bg-coffee/20 rounded transition-colors"
             >
               <X size={12} className="text-coffee" />
@@ -326,6 +404,51 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
               e.target.value = "";
             }}
           />
+
+          {/* Plus button for tools */}
+          <div className="relative" ref={toolMenuRef}>
+            <button
+              onClick={() => setShowToolMenu(!showToolMenu)}
+              disabled={isProcessing || isTyping}
+              className="p-2 ml-2 text-charcoal/50 hover:text-coffee hover:bg-coffee/10 rounded-lg transition-colors disabled:opacity-50"
+              title="Select tool"
+            >
+              <Plus size={18} />
+            </button>
+
+            {/* Tool menu dropdown */}
+            {showToolMenu && (
+              <div className="absolute bottom-full left-0 mb-2 w-72 bg-white rounded-xl shadow-lg border border-stone-200 py-2 z-50 overflow-hidden">
+                {TOOLS.map((tool) => (
+                  <button
+                    key={tool.id}
+                    onClick={() => {
+                      console.log("[UI] Tool selected:", tool.id);
+                      onToolSelect(tool.id);
+                      setShowToolMenu(false);
+                    }}
+                    className={clsx(
+                      "w-full text-left px-4 py-3 hover:bg-stone-50 transition-colors flex items-start gap-3",
+                      selectedTool === tool.id && "bg-coffee/5"
+                    )}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-coffee/10 flex items-center justify-center shrink-0">
+                      <tool.icon size={16} className="text-coffee" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-charcoal">
+                        {tool.name}
+                      </p>
+                      <p className="text-xs text-charcoal/60 mt-0.5">
+                        {tool.description}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing}
@@ -347,13 +470,23 @@ export const HomeChatInterface: React.FC<HomeChatInterfaceProps> = ({
             disabled={isTyping}
             className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal/40 disabled:opacity-50"
           />
-          <button
-            onClick={handleSendMessage}
-            disabled={!inputText.trim() || isTyping}
-            className="p-2 mr-2 text-coffee hover:bg-coffee/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send size={18} />
-          </button>
+          {(isSpeaking || isTyping) ? (
+            <button
+              onClick={onStopSpeaking}
+              className="p-2 mr-2 bg-charcoal text-white hover:bg-charcoal/80 rounded-lg transition-colors"
+              title="Stop"
+            >
+              <Square size={16} fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputText.trim()}
+              className="p-2 mr-2 text-coffee hover:bg-coffee/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send size={18} />
+            </button>
+          )}
         </div>
         <p className="text-[10px] text-center text-charcoal/30 mt-2">
           AI can make mistakes. Please verify important legal information.

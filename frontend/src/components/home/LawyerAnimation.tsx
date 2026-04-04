@@ -93,6 +93,8 @@ export const LawyerAnimation: React.FC<LawyerAnimationProps> = ({
         playVideo("talkingAfterRead");
       }
     }
+    // talkingAfterReadPhase intentionally excluded - only react to state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, pauseOtherVideos, playVideo]);
 
   const handleVideoEnded = useCallback(
@@ -141,7 +143,7 @@ export const LawyerAnimation: React.FC<LawyerAnimationProps> = ({
   );
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-b from-ivory to-stone-100 overflow-hidden">
+    <div className="relative w-full h-full flex items-center justify-center bg-linear-to-b from-ivory to-stone-100 overflow-hidden">
       <div className="absolute inset-0 opacity-20 pointer-events-none">
         <div className="absolute top-10 right-10 w-32 h-32 bg-gold/30 rounded-full blur-3xl" />
         <div className="absolute bottom-10 left-10 w-40 h-40 bg-coffee/20 rounded-full blur-3xl" />

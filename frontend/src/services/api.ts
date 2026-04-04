@@ -11,6 +11,7 @@ export interface UploadResponse {
 
 export interface ChatResponse {
   answer: string;
+  tool_result?: any;
 }
 
 export const uploadDocument = async (file: File): Promise<UploadResponse> => {
@@ -32,21 +33,32 @@ export const uploadDocument = async (file: File): Promise<UploadResponse> => {
 export const sendChatMessage = async (
   question: string,
   documentId?: string,
-  history?: ChatMessage[]
+  history?: ChatMessage[],
+  selectedTool?: string | null,
+  signal?: AbortSignal
 ): Promise<ChatResponse> => {
+  const payload = {
+    question,
+    document_id: documentId,
+    history,
+    selected_tool: selectedTool,
+  };
+  
+  console.log("[API] Sending chat message with payload:", payload);
+  
   const response = await fetch(`${API_BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      question,
-      document_id: documentId,
-      history,
-    }),
+    body: JSON.stringify(payload),
+    signal,
   });
 
   if (!response.ok) {
     throw new Error("Chat failed");
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log("[API] Received response:", data);
+  
+  return data;
 };
