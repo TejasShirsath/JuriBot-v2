@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { PageLayout } from "../components/common/PageLayout";
 import { LawyerAnimation } from "../components/home/LawyerAnimation";
 import { HomeChatInterface } from "../components/home/HomeChatInterface";
@@ -20,7 +20,7 @@ function HomePage() {
 
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const { speak, stop } = useTextToSpeech({
+  const { speak, stop, initialize } = useTextToSpeech({
     pitch: 1.2,
     rate: 0.95,
     onStart: () => setIsSpeaking(true),
@@ -29,6 +29,24 @@ function HomePage() {
       finishTalking();
     },
   });
+
+  // Initialize TTS on first user interaction
+  useEffect(() => {
+    const initializeTTS = () => {
+      initialize();
+      // Remove listener after first interaction
+      document.removeEventListener("click", initializeTTS);
+      document.removeEventListener("touchstart", initializeTTS);
+    };
+
+    document.addEventListener("click", initializeTTS, { once: true });
+    document.addEventListener("touchstart", initializeTTS, { once: true });
+
+    return () => {
+      document.removeEventListener("click", initializeTTS);
+      document.removeEventListener("touchstart", initializeTTS);
+    };
+  }, [initialize]);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [uploadedDoc, setUploadedDoc] = useState<UploadedDocument | null>(null);
