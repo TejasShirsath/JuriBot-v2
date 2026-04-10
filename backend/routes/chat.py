@@ -8,6 +8,7 @@ from tools.llm_tools import TOOLS, execute_tool
 
 INDEX_FOLDER = "indexes"
 QDRANT_URL = os.getenv("QDRANT_DB_URL")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION")
 
 
@@ -15,7 +16,7 @@ def get_qdrant_retriever(embeddings, k=5):
     """Get retriever from Qdrant vector store if collection exists."""
     print("\n[QDRANT] Connecting to Qdrant...")
     try:
-        client = QdrantClient(url=QDRANT_URL)
+        client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
         collections = [c.name for c in client.get_collections().collections]
         print(f"[QDRANT] Available collections: {collections}")
 
@@ -27,7 +28,8 @@ def get_qdrant_retriever(embeddings, k=5):
         vector_store = QdrantVectorStore.from_existing_collection(
             embedding=embeddings,
             url=QDRANT_URL,
-            collection_name=QDRANT_COLLECTION
+            collection_name=QDRANT_COLLECTION,
+            api_key=QDRANT_API_KEY
         )
         return vector_store.as_retriever(search_kwargs={"k": k})
     except Exception as e:
