@@ -85,6 +85,10 @@ export default function AuthPage() {
     }
   };
 
+  const handleGuestLogin = () => {
+    navigate("/home");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
@@ -140,9 +144,9 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="h-screen w-full bg-ivory flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen w-full bg-ivory flex items-center justify-center p-4 py-16 relative overflow-y-auto">
       {/* Background Watermark */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.02]">
+      <div className="fixed inset-0 pointer-events-none opacity-[0.02]">
         <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-serif text-[20rem] text-charcoal whitespace-nowrap">
           JURIBOT
         </span>
@@ -152,7 +156,7 @@ export default function AuthPage() {
         <Link
           to="/"
           state={{ skipLoading: true }}
-          className="absolute -top-12 left-0 md:-left-24 md:top-0 text-gold hover:text-coffee transition-colors z-50 flex items-center gap-2 group"
+          className="absolute -top-12 left-0 text-gold hover:text-coffee transition-colors z-50 flex items-center gap-2 group"
         >
           <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           <span className="font-sans font-bold tracking-wider text-sm">BACK</span>
@@ -333,7 +337,8 @@ export default function AuthPage() {
             {mode !== "forgot-password" && (
               <>
                 <SocialLogin 
-                  onGoogleClick={handleGoogleSignIn} 
+                  onGoogleClick={handleGoogleSignIn}
+                  onGuestClick={handleGuestLogin}
                   isLoading={isLoading} 
                   disabled={mode === "signup" && !termsAccepted}
                 />

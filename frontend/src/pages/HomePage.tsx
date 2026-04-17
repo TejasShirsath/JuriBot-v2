@@ -1,89 +1,229 @@
-import { motion } from "motion/react";
-import { FileText, Calculator, Scale, Bot } from "lucide-react";
-import { HomeNavbar } from "../components/home/HomeNavbar";
-import { ModuleCard } from "../components/home/ModuleCard";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { PageLayout } from "../components/common/PageLayout";
+import { LawyerAnimation } from "../components/home/LawyerAnimation";
+import { HomeChatInterface } from "../components/home/HomeChatInterface";
+import type { Message, UploadedDocument } from "../components/home/HomeChatInterface";
+import { useAnimationState } from "../hooks/useAnimationState";
+import { useTextToSpeech } from "../hooks/useTextToSpeech";
+import { uploadDocument, sendChatMessage } from "../services/api";
+import type { ChatMessage } from "../services/api";
 
-export default function HomePage() {
-  const modules = [
-    {
-      title: "Document Intelligence",
-      description:
-        "Instantly summarize and interrogate legal documents in any language for immediate clarity and insight.",
-      icon: <FileText size={24} />,
-      path: "/document-intelligence",
+function HomePage() {
+  const {
+    currentState,
+    startReading,
+    freezeReading,
+    startTalking,
+    finishTalking,
+    resetDocument,
+  } = useAnimationState();
+
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const { speak, stop, initialize } = useTextToSpeech({
+    pitch: 1.2,
+    rate: 0.95,
+    onStart: () => setIsSpeaking(true),
+    onEnd: () => {
+      setIsSpeaking(false);
+      finishTalking();
     },
-    {
-      title: "Cost Projection",
-      description:
-        "Calculate precise legal cost estimates based on case parameters to effectively plan your financial strategy.",
-      icon: <Calculator size={24} />,
-      path: "/cost-projection",
+  });
+
+  // Initialize TTS on first user interaction
+  useEffect(() => {
+    const initializeTTS = () => {
+      initialize();
+      // Remove listener after first interaction
+      document.removeEventListener("click", initializeTTS);
+      document.removeEventListener("touchstart", initializeTTS);
+    };
+
+    document.addEventListener("click", initializeTTS, { once: true });
+    document.addEventListener("touchstart", initializeTTS, { once: true });
+
+    return () => {
+      document.removeEventListener("click", initializeTTS);
+      document.removeEventListener("touchstart", initializeTTS);
+    };
+  }, [initialize]);
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [uploadedDoc, setUploadedDoc] = useState<UploadedDocument | null>(null);
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleFileUpload = useCallback(
+    async (file: File) => {
+      startReading();
+      setIsProcessing(true);
+
+      try {
+        const response = await uploadDocument(file);
+        setUploadedDoc({
+          id: response.document_id,
+          name: file.name,
+          size: file.size,
+        });
+      } catch (error) {
+        console.error("Upload failed:", error);
+        finishTalking();
+      } finally {
+        setIsProcessing(false);
+      }
     },
-    {
-      title: "Verdict Analytics",
-      description:
-        "Leverage historical data to predict case outcomes and gain strategic advantages through pattern analysis.",
-      icon: <Scale size={24} />,
-      path: "/verdict-analytics",
+    [startReading, finishTalking]
+  );
+
+  const handleReadingComplete = useCallback(() => {
+    // Freeze the reading animation on last frame until next animation starts
+    freezeReading();
+  }, [freezeReading]);
+
+  const handleSendMessage = useCallback(
+    async (text: string) => {
+      console.log("[HomePage] Sending message with tool:", selectedTool);
+      // Stop any ongoing speech
+      stop();
+
+      // Cancel any previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      // Create new abort controller for this request
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        text,
+        timestamp: new Date(),
+        document: uploadedDoc || undefined,
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+      setIsTyping(true);
+      // Clear uploaded document and selected tool after sending
+      setUploadedDoc(null);
+      setSelectedTool(null);
+      // Don't start talking animation yet - stay idle or frozen until response
+
+      try {
+        const history: ChatMessage[] = messages.map((m) => ({
+          role: m.role,
+          content: m.text,
+        }));
+
+        const response = await sendChatMessage(
+          text,
+          uploadedDoc?.id,
+          history,
+          selectedTool,
+          abortController.signal
+        );
+
+        // Check if request was aborted
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          text: response.answer,
+          timestamp: new Date(),
+          toolResult: response.tool_result,
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        // Start talking animation when response is ready
+        startTalking();
+        // Speak the response - animation will stop when speech ends via onEnd callback
+        speak(response.answer);
+      } catch (error) {
+        // Don't show error if request was aborted by user
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+        
+        console.error("Chat failed:", error);
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          text: "I apologize, but I encountered an error. Please try again.",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        startTalking();
+        speak("I apologize, but I encountered an error. Please try again.");
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsTyping(false);
+        }
+        abortControllerRef.current = null;
+      }
     },
-    {
-      title: "Virtual Counsel",
-      description:
-        "Your always-on legal assistant for instant guidance, research, and answers to complex legal inquiries.",
-      icon: <Bot size={24} />,
-      path: "/virtual-counsel",
-    },
-  ];
+    [messages, uploadedDoc, selectedTool, startTalking, speak, stop]
+  );
+
+  const handleRemoveDocument = useCallback(() => {
+    setUploadedDoc(null);
+    resetDocument();
+  }, [resetDocument]);
+
+  const handleStopSpeaking = useCallback(() => {
+    // Abort any ongoing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    stop();
+    setIsSpeaking(false);
+    setIsTyping(false);
+    finishTalking();
+  }, [stop, finishTalking]);
+
+  const handleToolSelect = useCallback((tool: string | null) => {
+    console.log("[HomePage] Tool selected:", tool);
+    setSelectedTool(tool);
+  }, []);
 
   return (
-    <div className="min-h-screen md:h-screen w-full bg-ivory flex flex-col relative overflow-x-hidden md:overflow-hidden">
-      {/* Background */}
-      <div className="fixed inset-0 pointer-events-none opacity-40 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] z-0 mix-blend-multiply"></div>
-
-      <div className="absolute top-[-10%] right-[-5%] w-125 h-125 bg-gold/5 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] left-[-5%] w-125 h-125 bg-coffee/5 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div className="absolute inset-0 pointer-events-none opacity-[0.02] z-0 flex items-center justify-center overflow-hidden">
-        <span className="font-serif text-[15vw] md:text-[20rem] text-charcoal whitespace-nowrap select-none">
-          JURIBOT
-        </span>
-      </div>
-
-      <HomeNavbar />
-
-      <main className="grow flex flex-col items-center justify-center px-6 md:px-12 relative z-10 pb-12 pt-24 md:pt-0">
-        <div className="max-w-7xl w-full mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-20 relative"
-          >
-            <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 bg-gold/10 rounded-full blur-3xl"></div>
-            <h1 className="font-serif text-5xl md:text-7xl text-charcoal mb-6 tracking-tight leading-none relative z-10">
-              Legal Clarity.{" "}
-              <span className="italic text-coffee block mt-2">Instantly.</span>
-            </h1>
-            <p className="font-sans text-charcoal/50 text-lg max-w-lg mx-auto leading-relaxed relative z-10">
-              Select a specialized module below to harness the power of AI for
-              your legal needs.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {modules.map((module, index) => (
-              <ModuleCard
-                key={index}
-                title={module.title}
-                description={module.description}
-                icon={module.icon}
-                path={module.path}
-                delay={0.4 + index * 0.1}
-              />
-            ))}
-          </div>
+    <PageLayout sectionTitle="Chat" backButton={false} fixedHeight={true} className="p-5 max-w-none! w-full">
+      <div className="flex-1 flex min-h-0 w-full">
+        {/* Left Panel - Lawyer Animation */}
+        <div className="hidden lg:flex shrink-0 h-full">
+          <LawyerAnimation
+            state={currentState}
+            onReadingComplete={handleReadingComplete}
+          />
         </div>
-      </main>
-    </div>
+
+        {/* Right Panel - Chat Interface */}
+        <div className="flex-1 flex flex-col min-w-0 h-full">
+          <HomeChatInterface
+            messages={messages}
+            uploadedDocument={uploadedDoc}
+            isProcessing={isProcessing}
+            isTyping={isTyping}
+            isSpeaking={isSpeaking}
+            selectedTool={selectedTool}
+            onFileUpload={handleFileUpload}
+            onSendMessage={handleSendMessage}
+            onRemoveDocument={handleRemoveDocument}
+            onStopSpeaking={handleStopSpeaking}
+            onToolSelect={handleToolSelect}
+            className="flex-1"
+          />
+        </div>
+      </div>
+    </PageLayout>
   );
 }
+
+export default HomePage;

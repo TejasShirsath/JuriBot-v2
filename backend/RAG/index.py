@@ -162,11 +162,12 @@ def create_embeddings_and_store(docs: list):
     # error of "embedding dimension mismatch"
 
     # Connect to Qdrant and add documents
-    qdrant_url = "http://localhost:6333"
-    collection_name = "juri_bot"
+    qdrant_url = os.getenv("QDRANT_DB_URL")
+    qdrant_api_key = os.getenv("QDRANT_API_KEY")
+    collection_name = os.getenv("QDRANT_COLLECTION")
 
     # Check if collection exists, if so add to it, otherwise create new
-    client = QdrantClient(url=qdrant_url)
+    client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key)
     collections = [c.name for c in client.get_collections().collections]
 
     if collection_name in collections:
@@ -183,6 +184,7 @@ def create_embeddings_and_store(docs: list):
             documents=chunks,
             embedding=embedding_model,
             url=qdrant_url,
+            api_key=qdrant_api_key,
             collection_name=collection_name
         )
 
