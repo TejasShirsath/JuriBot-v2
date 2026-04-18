@@ -3,6 +3,9 @@ print("Starting Flask app...")
 from flask_cors import CORS
 print("CORS enabled.")
 import os
+import time
+from collections import defaultdict, deque
+from threading import Lock
 from dotenv import load_dotenv
 
 # Load environment variables from current directory
@@ -23,6 +26,50 @@ print("Routes initialized.")
 app = Flask(__name__)
 CORS(app)
 print("Flask app initialized.")
+
+RATE_LIMIT_REQUESTS = 30
+RATE_LIMIT_WINDOW_SECONDS = 60
+request_log = defaultdict(deque)
+request_log_lock = Lock()
+
+
+def _get_client_id():
+    # Prefer forwarded IP when behind a reverse proxy.
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+@app.before_request
+def rate_limit_per_user():
+    if not request.path.startswith("/api/") or request.path == "/api/health":
+        return None
+
+    client_id = _get_client_id()
+    now = time.time()
+    window_start = now - RATE_LIMIT_WINDOW_SECONDS
+
+    with request_log_lock:
+        client_requests = request_log[client_id]
+
+        while client_requests and client_requests[0] < window_start:
+            client_requests.popleft()
+
+        if len(client_requests) >= RATE_LIMIT_REQUESTS:
+            return (
+                jsonify(
+                    {
+                        "error": "Too many requests",
+                        "message": "Rate limit exceeded: max 30 requests per minute per user.",
+                    }
+                ),
+                429,
+            )
+
+        client_requests.append(now)
+
+    return None
 
 
 INDEX_FOLDER = "indexes"
