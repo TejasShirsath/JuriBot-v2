@@ -1,4 +1,5 @@
 from pathlib import Path
+import csv
 import os
 import shutil
 from dotenv import load_dotenv
@@ -12,10 +13,10 @@ from langchain_community.document_loaders import (
     PyPDFLoader,
     Docx2txtLoader,
     UnstructuredExcelLoader,
-    CSVLoader,
     JSONLoader,
     TextLoader
 )
+from langchain_core.documents import Document
 
 load_dotenv("../.env")
 
@@ -38,7 +39,10 @@ def detect_encoding(file_path: Path) -> str:
         import chardet
         with open(file_path, 'rb') as f:
             result = chardet.detect(f.read(10000))
-            return result['encoding'] or 'utf-8'
+            encoding = result['encoding'] or 'utf-8'
+            if encoding.lower() in {"ascii", "us-ascii", "ansi_x3.4-1968"}:
+                return "utf-8"
+            return encoding
     except ImportError:
         # Try common encodings
         for encoding in ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252']:
@@ -49,6 +53,41 @@ def detect_encoding(file_path: Path) -> str:
             except (UnicodeDecodeError, UnicodeError):
                 continue
         return 'utf-8'
+
+
+def load_csv_documents(file_path: Path, encoding: str) -> list[Document]:
+    """Load a CSV file as one document per row."""
+    documents = []
+    tried_encodings = [encoding, "utf-8-sig", "utf-8", "cp1252", "latin-1"]
+
+    for candidate in dict.fromkeys(tried_encodings):
+        try:
+            with open(file_path, "r", encoding=candidate, newline="") as csv_file:
+                reader = csv.DictReader(csv_file)
+                for row_number, row in enumerate(reader, start=2):
+                    row_items = [(key, (value or "").strip()) for key, value in row.items()]
+                    content_lines = [f"{key}: {value}" for key, value in row_items if value]
+                    documents.append(
+                        Document(
+                            page_content="\n".join(content_lines),
+                            metadata={
+                                "source_file": file_path.name,
+                                "row_number": row_number,
+                            },
+                        )
+                    )
+                return documents
+        except UnicodeDecodeError:
+            documents.clear()
+            continue
+
+    raise UnicodeDecodeError(
+        encoding,
+        b"",
+        0,
+        1,
+        f"Unable to decode CSV file {file_path.name} with supported encodings",
+    )
 
 
 def get_document_loader(file_path: Path):
@@ -69,7 +108,7 @@ def get_document_loader(file_path: Path):
     elif ext == ".csv":
         encoding = detect_encoding(file_path)
         print(f"  - Detected encoding: {encoding}")
-        return CSVLoader(file_path=path_str, encoding=encoding)
+        return load_csv_documents(file_path, encoding)
     elif ext == ".json":
         return JSONLoader(file_path=path_str, jq_schema=".", text_content=False)
     elif ext == ".txt":
@@ -105,7 +144,7 @@ def load_documents_from_folder(folder_path: Path) -> tuple[list, list[Path]]:
             if loader is None:
                 continue
 
-            docs = loader.load()
+            docs = loader if isinstance(loader, list) else loader.load()
 
             # Add source metadata to track which file the document came from
             for doc in docs:
